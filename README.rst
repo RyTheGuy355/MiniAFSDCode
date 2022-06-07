@@ -6,8 +6,7 @@ pybaselines is a library of algorithms for the baseline correction of experiment
 
 * For Python 3.6+
 * Open Source: BSD 3-Clause License
-* Source Code: https://github.com/derb12/pybaselines
-* Documentation: https://pybaselines.readthedocs.io.
+* Source Code: https://github.com/RyTheGuy355/MiniAFSDCode
 
 
 .. contents:: **Contents**
@@ -23,7 +22,9 @@ To be added.
 Installation
 ------------
 
-TODO: Figure out how to install from private repository for releases and main branch
+TODO: Figure out how to install from private repository for releases and main branch.
+
+Probably want to introduce how to install python using python's website, winpython, or anaconda.
 
 
 Stable Release
@@ -45,10 +46,10 @@ To install the current version of pybaselines from GitHub, run:
 
 .. code-block:: console
 
-    pip install git+https://github.com/derb12/pybaselines.git#egg=pybaselines
+    pip install pip install git+https://github.com/RyTheGuy355/MiniAFSDCode.git
 
 
-.. _GitHub repo: https://github.com/derb12/pybaselines
+.. _GitHub repo: https://github.com/RyTheGuy355/MiniAFSDCode
 
 
 Dependencies
