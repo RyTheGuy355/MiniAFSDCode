@@ -1,6 +1,7 @@
 [build-system]
-# Version 4.2 covers pep-517 and pep-518 since support was
-# added to setuptools in v40.8.0.
+# setuptools v42.0.0 was first version to allow multiple license files
+# (the license_files metadata field in setup.cfg). Also covers pep-517
+# and pep-518 since support was added to setuptools in v40.8.0.
 requires = ["setuptools>=42", "wheel"]
 build-backend = "setuptools.build_meta"
 
