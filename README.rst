@@ -77,7 +77,7 @@ To install the current version of mini_afsd from GitHub, run:
 
 .. code-block:: console
 
-    pip install pip install https://github.com/RyTheGuy355/MiniAFSDCode/zipball/main
+    pip install https://github.com/RyTheGuy355/MiniAFSDCode/zipball/main
 
 
 .. _GitHub repo: https://github.com/RyTheGuy355/MiniAFSDCode
