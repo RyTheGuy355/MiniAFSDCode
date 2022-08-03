@@ -122,7 +122,8 @@ class Controller:
     """
 
     def __init__(self, xyStepsPerMil=40, xyPulPerStep=2, aStepsPerMil=1020,
-                 aPulPerStep=4, port_regex='(CP21)', connect_serial=True, labjack_force=False):
+                 aPulPerStep=4, port_regex='(CP21)', connect_serial=True, labjack_force=False,
+                 confirm_run=True):
         """
         Initializes the object.
 
@@ -146,6 +147,9 @@ class Controller:
         labjack_force : bool, optional
             If True, designates that the force measurement comes from the LabJack connection. If
             False (default), the force measurement is from the serial connection.
+        confirm_run : bool, optional
+            If True (default), will ask for confirmation for running a GCode file if
+            data collection is not turned on; If False, will directly run the GCode.
         """
         self.xyPulPerMil = xyStepsPerMil * xyPulPerStep
         self.aPulPerMil = aStepsPerMil * aPulPerStep
@@ -161,7 +165,7 @@ class Controller:
 
         self.root = tk.Tk()
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
-        self.gui = Gui(self.root, self)
+        self.gui = Gui(self, confirm_run=confirm_run)
 
         if connect_serial:
             matching_ports = list(list_ports.grep(port_regex))

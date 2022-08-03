@@ -3,6 +3,7 @@
 
 from collections import deque
 import csv
+from pathlib import Path
 import struct
 import time
 import tkinter as tk
@@ -43,22 +44,25 @@ class Gui:
         The button for enabling XY movement.
     """
 
-    def __init__(self, root, controller, display_size=140):
+    def __init__(self, controller, display_size=140, confirm_run=True):
         """
         Initializes the user interface.
 
         Parameters
         ----------
-        root : tkinter.Tk
-            The root widget for the window.
         controller : Controller
             The controller object for the GUI.
         display_size : int, optional
             The number of data points to display when plotting. Default is 140.
+        confirm_run : bool, optional
+            If True (default), will ask for confirmation for running a GCode file if
+            data collection is not turned on; If False, will directly run the GCode.
         """
         self.controller = controller
         self.times = tuple(t * 3 for t in range(display_size))
         self.displayData = deque([190] * display_size, maxlen=display_size)
+        self.gcode_directory = '/'
+        self.confirm_run = confirm_run
 
         self.createMainFrames()
         self.createTraverseFrame()
@@ -283,7 +287,7 @@ class Gui:
         homeAllBut = tk.Button(
             text="Home All",
             font=("Times New Roman", 12),
-            width=7,
+            width=9,
             pady=5,
             bg="#91ceff",
             fg="black",
@@ -294,14 +298,14 @@ class Gui:
         homeAllBut.grid(column=2, row=1, in_=zeroFrame, pady=5)
 
         self.enXYBut = tk.Button(
-            text="Enable XY",
+            text="Enable XYA",
             font=("Times New Roman", 12),
-            width=7,
+            width=9,
             pady=5,
             bg="#8efa8e",
             fg="black",
             relief="raised",
-            command=lambda: self.toggleOutputs(b"XY"),
+            command=self.toggleOutputs,
         )
         self.enXYBut.grid(column=2, row=0, in_=zeroFrame)
 
@@ -345,18 +349,6 @@ class Gui:
         )
         self.aForceEntry.grid(column=0, row=1, in_=aForceFrame)
         self.aForceEntry.bind("<KeyRelease-Return>", self.updateForce)
-
-        self.enABut = tk.Button(
-            text="Enable A",
-            font=("Times New Roman bold", 18),
-            width=7,
-            pady=5,
-            bg="#8efa8e",
-            fg="black",
-            relief="raised",
-            command=lambda: self.toggleOutputs(b"A"),
-        )
-        self.enABut.grid(column=1, row=0, in_=butFrame, pady=10, padx=10)
 
         self.dataOutputPane = tk.Canvas(height=200, bg="#ffffff")
         self.dataOutputPane.grid(column=0, row=1, in_=self.aFrame, sticky=tk.E + tk.W)
@@ -410,7 +402,7 @@ class Gui:
             bg="white",
             fg="black",
             textvariable=self.gCodeFileText,
-            # state=readonly  # TODO make readonly so user must use file dialog?
+            state='readonly'
         )
         gCodeFileEntry.grid(column=0, row=1, in_=gCodeFileFrame)
 
@@ -437,6 +429,18 @@ class Gui:
             command=self.runFile,
         )
         gCodeFileRunButton.grid(column=2, padx=2, row=1, in_=gCodeFileFrame)
+
+        gCodeFileClearButton = tk.Button(
+            text="Clear File",
+            font=("Times New Roman", 12),
+            width=7,
+            pady=2,
+            bg="#8f8f8f",
+            fg="black",
+            relief="raised",
+            command=lambda: self.gCodeFileText.set(''),
+        )
+        gCodeFileClearButton.grid(column=1, pady=2, row=2, in_=gCodeFileFrame)
 
     def createSaveFrame(self):
         """Creates the section for saving, clearing, and collecting data."""
@@ -538,27 +542,20 @@ class Gui:
             self.controller.serial_processor.waitingForAck.clear()
             self.sendCode(b'S', 0)
             self.sBut.config(text="Start Mill", bg="#8efa8e")
-            self.enXYBut.config(text="Enable XY", bg="#8efa8e")
-            self.enABut.config(text="Enable A", bg="#8efa8e")
+            self.enXYBut.config(text="Enable XYA", bg="#8efa8e")
             self.controller.running.clear()
 
-    def toggleOutputs(self, axis):
-        """Toggles the buttons for XY or A states."""
+    def toggleOutputs(self):
+        """Toggles the buttons for X, Y, and A states."""
         if self.controller.running.is_set():
-            if axis == b"XY":
-                if self.enXYBut["text"] == "Disable XY":
-                    self.enXYBut.config(text="Enable XY", bg="#8efa8e")
-                    self.sendCode(b"M18 X Y", 0)
-                else:
-                    self.enXYBut.config(text="Disable XY", bg="#ff475d")
-                    self.sendCode(b"M17 X Y", 0)
+            if self.enXYBut["text"] == "Disable XYA":
+                self.enXYBut.config(text="Enable XYA", bg="#8efa8e")
+                self.sendCode(b"M18 X Y", 0)
+                self.sendCode(b"M18 A", 0)
             else:
-                if self.enABut["text"] == "Disable A":
-                    self.enABut.config(text="Enable A", bg="#8efa8e")
-                    self.sendCode(b"M18 A", 0)
-                else:
-                    self.enABut.config(text="Disable A", bg="#ff475d")
-                    self.sendCode(b"M17 A", 0)
+                self.enXYBut.config(text="Disable XYA", bg="#ff475d")
+                self.sendCode(b"M17 X Y", 0)
+                self.sendCode(b"M17 A", 0)
 
     def saveFile(self, source=None):
         """
@@ -687,13 +684,13 @@ class Gui:
             ).grid(column=1, row=0, padx=30)
 
     def sendGCode(self, event):
-        """Runs user-input GCode."""
+        """Runs user-input GCode and ensures it is upper-case."""
         gcode = self.gCodeText.get()
         if gcode:
             if self.controller.running.is_set():
                 try:
                     if int(event.type) == 3:
-                        self.sendCode(gcode.encode(), 1)
+                        self.sendCode(gcode.upper().encode(), 1)
                 except Exception:
                     print("There was an exception?")
             else:
@@ -702,12 +699,13 @@ class Gui:
     def browseFiles(self):
         """Browses files for running GCode."""
         filename = filedialog.askopenfilename(
-            initialdir="/",
+            initialdir=self.gcode_directory,
             title="Select a File",
             filetypes=(("GCode Files", "*.gcode*"), ("Text files", "*.txt*"), ("All files", "*.*")),
         )
-        # TODO use filename even if empty to clear the gcode file path?
-        self.gCodeFileText.set(filename)
+        if filename:
+            self.gcode_directory = Path(filename).parent
+            self.gCodeFileText.set(filename)
 
     def runFile(self):
         """Runs GCode from the specified file."""
@@ -721,6 +719,66 @@ class Gui:
             [1] * len(self.controller.serial_processor.espBuffer)
         )
         print(self.controller.serial_processor.espTypeBuffer)
+
+        if not self.controller.collecting.is_set():
+            if self.confirm_run:
+                self.confirm_run_with_data()
+            elif self.confirm_run is None:
+                self.startStopData()
+
+    def set_cofirm_run(self, set_run, confirm_run):
+        if set_run and confirm_run:
+            self.confirm_run = None
+            self.startStopData()
+        elif set_run:
+            self.startStopData()
+        elif confirm_run:
+            self.confirm_run = False
+
+    def confirm_run_with_data(self):
+        confirmRunWin = tk.Toplevel(self.controller.root, takefocus=True)
+        confirmRunWin.title("Running without saving")
+        askSaveLabel = tk.Label(
+            confirmRunWin,
+            font=("Times New Roman", 22),
+            text="Turn data collection on?",
+            fg="black",
+            padx=5,
+        )
+        askSaveLabel.grid(column=0, row=0, sticky=tk.E + tk.W)
+        askSaveLabel.grid(column=0, row=0)
+        askSaveButFrame = tk.Frame(confirmRunWin, width=750, height=80)
+        askSaveButFrame.grid(column=0, row=1, pady=10)
+
+        checkbox_var = tk.BooleanVar()
+        confirm_checkbox = tk.Checkbutton(
+            askSaveButFrame, text="Remember Selection", font=("Times New Roman", 18),
+            variable=checkbox_var
+        )
+        confirm_checkbox.grid(column=0, row=0, pady=20)
+
+        tk.Button(
+            askSaveButFrame,
+            font=("Times New Roman", 22),
+            text="YES",
+            fg="black",
+            bg="#8efa8e",
+            command=lambda: [
+                self.set_cofirm_run(True, checkbox_var.get()), confirmRunWin.destroy()
+            ],
+        ).grid(column=0, row=1, padx=30)
+        tk.Button(
+            askSaveButFrame,
+            font=("Times New Roman", 22),
+            text="NO",
+            fg="black",
+            bg="#ff475d",
+            command=lambda: [
+                self.set_cofirm_run(False, checkbox_var.get()), confirmRunWin.destroy()
+            ],
+        ).grid(column=1, row=1, padx=30)
+        confirmRunWin.grab_set()  # prevent interaction with main window until dialog closes
+        confirmRunWin.wm_transient(self.controller.root)  # set dialog above main window
 
     def display(self, aForce, xPos, yPos, aPos, code, data):
         """
