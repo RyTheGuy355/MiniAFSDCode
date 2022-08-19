@@ -119,7 +119,7 @@ class SerialProcessor:
                         print(bufferValue)
                         self.espBuffer.pop(i)
                         self.espTypeBuffer.pop(i)
-                        if setAck:
+                        if setAck and typeValue != 0:
                             self.waitingForAck.set()
                         break
 
