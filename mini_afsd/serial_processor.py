@@ -53,7 +53,7 @@ class SerialProcessor:
             self.esp = None
         else:
             try:
-                # TODO is baudrate fixed or variable?
+                # TODO is baudrate fixed or variable? can be set on esp, but can be variable
                 self.esp = serial.Serial(port=self._port, baudrate=115200, timeout=1)
             except serial.SerialException:  # wrong port selected
                 self._port = None
@@ -119,7 +119,7 @@ class SerialProcessor:
                         print(bufferValue)
                         self.espBuffer.pop(i)
                         self.espTypeBuffer.pop(i)
-                        if setAck:
+                        if setAck and typeValue != 0:
                             self.waitingForAck.set()
                         break
 
@@ -177,7 +177,7 @@ class SerialProcessor:
         code : bytes
             The byte G-code to send to the serial port.
         type : {0, 1}
-            #TODO what does type mean?
+            0 means send the code immediately and 1 means to wait for acknowledgement.
         """
         self.espBuffer.append(code)
         self.espTypeBuffer.append(type)
