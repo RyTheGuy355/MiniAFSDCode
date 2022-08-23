@@ -17,6 +17,7 @@ class SerialProcessor:
         self.port = port
         self.close_port = threading.Event()
         self.waitingForAck = threading.Event()
+        self.commandInvalid = threading.Event()
 
         self.forceData = []
         self.espBuffer = []
@@ -53,7 +54,7 @@ class SerialProcessor:
             self.esp = None
         else:
             try:
-                # TODO is baudrate fixed or variable? can be set on esp, but can be variable
+                # TODO is baudrate fixed or variable?
                 self.esp = serial.Serial(port=self._port, baudrate=115200, timeout=1)
             except serial.SerialException:  # wrong port selected
                 self._port = None
@@ -72,28 +73,17 @@ class SerialProcessor:
     def serialListen(self):
         """The event loop for the thread that reads messages from the serial port."""
         print("Starting serial listener")
-        while not self.close_port.is_set():
-            data = self.esp.read_until(b'\x03\x04')
-            if len(data) > 0:
-                if data[0] == 1:
-                    if data[1] == 8:
-                        print("CTG")
-                        self.waitingForAck.clear()
-                    else:
-                        xPos = data[2:6]
-                        yPos = data[6:10]
-                        aPos = data[10:14]
-                        if data[1] == 70:  # ACSII F
-                            aForce = data[14:16]
-                            code = b'F'
-                        else:  # ACSII P
-                            aForce = None
-                            code = b'P'
-                        self.controller.gui.display(aForce, xPos, yPos, aPos, code, data)
-                elif data[0] == 6:
-                    print("Ack")
-                else:
-                    print(data.removesuffix(b'\x03\x04'))
+        while not self.close_port.is_set(): #TODO put a try-except in for potential errors
+            data = self.esp.read_until(b'\n')
+            data.strip(b'\n')
+            if (b'\r' in data):
+                data = data.strip(b'\r')
+            if b'ok' in data:
+                self.waitingForAck.clear()
+                self.commandInvalid.clear()
+            elif b'error' in data:
+                self.commandInvalid.set()
+            print(data)
 
         print("Stopping serial listener")
         self.esp.flush()
@@ -108,19 +98,21 @@ class SerialProcessor:
         print("Starting serial reporter")
         while self.esp.is_open:
             if len(self.espBuffer) > 0:
-                print('reading')
                 for i, (bufferValue, typeValue) in enumerate(
                     zip(self.espBuffer, self.espTypeBuffer)
                 ):
                     setAck = not self.waitingForAck.is_set() and self.controller.running.is_set()
                     if typeValue == 0 or setAck:
+                        self.waitingForAck.set()
                         self.esp.write(bufferValue)
-                        self.esp.write(b'\x04')
-                        print(bufferValue)
-                        self.espBuffer.pop(i)
-                        self.espTypeBuffer.pop(i)
-                        if setAck and typeValue != 0:
-                            self.waitingForAck.set()
+                        self.esp.write(b'\n')
+                        while (not self.waitingForAck.is_set() or self.commandInvalid.is_set()): #TODO maybe have different flag for if a response is detected
+                            time.sleep(0.01)
+                        if not self.commandInvalid.is_set():
+                            self.espBuffer.pop(i)
+                            self.espTypeBuffer.pop(i)
+                            if setAck:
+                                self.waitingForAck.set()
                         break
 
             time.sleep(0.01)
@@ -177,7 +169,7 @@ class SerialProcessor:
         code : bytes
             The byte G-code to send to the serial port.
         type : {0, 1}
-            0 means send the code immediately and 1 means to wait for acknowledgement.
+            #TODO what does type mean?
         """
         self.espBuffer.append(code)
         self.espTypeBuffer.append(type)

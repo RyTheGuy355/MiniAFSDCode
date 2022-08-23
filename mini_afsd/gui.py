@@ -253,8 +253,7 @@ class Gui:
             bg="#8f8f8f",
             fg="black",
             relief="raised",
-            command=lambda: self.goToZero(b"X"),
-            state='disabled'
+            command=lambda: self.sendCode(b"$HX", 0)
         )
         homeXBut.grid(column=1, row=0, in_=zeroFrame, pady=5, padx=5)
 
@@ -266,8 +265,7 @@ class Gui:
             bg="#8f8f8f",
             fg="black",
             relief="raised",
-            command=lambda: self.goToZero(b"Y"),
-            state='disabled'
+            command=lambda: self.sendCode(b"$HY", 0)
         )
         homeYBut.grid(column=1, row=1, in_=zeroFrame, pady=5)
 
@@ -279,8 +277,7 @@ class Gui:
             bg="#8f8f8f",
             fg="black",
             relief="raised",
-            command=lambda: self.goToZero(b"A"),
-            state='disabled'
+            command=lambda: self.sendCode(b"$HA", 0)
         )
         homeABut.grid(column=1, row=2, in_=zeroFrame, pady=5)
 
@@ -292,8 +289,7 @@ class Gui:
             bg="#91ceff",
             fg="black",
             relief="raised",
-            command=lambda: self.goToZero(3),
-            state='disabled'
+            command=lambda: self.sendCode(b"$H", 0)
         )
         homeAllBut.grid(column=2, row=1, in_=zeroFrame, pady=5)
 
@@ -533,14 +529,14 @@ class Gui:
     def sendStartStop(self):
         """Sends the code to turn the mill on and off."""
         if not self.controller.running.is_set():
-            self.sendCode(b'B', 0)
+            self.sendCode(b'$10=3', 0) #Tells qu
             self.sBut.config(text="Stop Mill", bg="#fc4747")
             self.controller.running.set()
         else:
             self.controller.serial_processor.espBuffer.clear()
             self.controller.serial_processor.espTypeBuffer.clear()
             self.controller.serial_processor.waitingForAck.clear()
-            self.sendCode(b'S', 0)
+            self.sendCode(b'\x85', 0)
             self.sBut.config(text="Start Mill", bg="#8efa8e")
             self.enXYBut.config(text="Enable XYA", bg="#8efa8e")
             self.controller.running.clear()
@@ -690,7 +686,7 @@ class Gui:
             if self.controller.running.is_set():
                 try:
                     if int(event.type) == 3:
-                        self.sendCode(gcode.upper().encode(), 1)
+                        self.sendCode(gcode.upper().encode(), 0)
                 except Exception:
                     print("There was an exception?")
             else:
