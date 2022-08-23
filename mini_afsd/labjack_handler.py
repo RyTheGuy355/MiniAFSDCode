@@ -10,6 +10,16 @@ class LabjackHandler:
     """An object for controlling communication to the mill through a serial port."""
 
     def __init__(self, controller, measure_force=False):
+        """
+        Initializes the Labjack handler.
+
+        Parameters
+        ----------
+        controller : _type_
+            _description_
+        measure_force : bool, optional
+            _description_. Default is False.
+        """
         self.controller = controller
         self.labjackHandle = None
         self.labjackThread = None
@@ -19,9 +29,9 @@ class LabjackHandler:
         self.TC_one_Data = []
         self.TC_two_Data = []
 
-        self.start_thread()
+        self.start_threads()
 
-    def start_thread(self):
+    def start_threads(self):
         """Spawns the thread for communicating with the Labjack."""
         try:
             self.labjackHandle = ljm.openS("T7", "ANY", "ANY")
