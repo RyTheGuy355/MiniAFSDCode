@@ -18,6 +18,7 @@ class SerialProcessor:
         self.close_port = threading.Event()
         self.waitingForAck = threading.Event()
         self.commandInvalid = threading.Event()
+        self.serialLock = threading.Event()
 
         self.forceData = []
         self.espBuffer = []
@@ -74,16 +75,12 @@ class SerialProcessor:
         """The event loop for the thread that reads messages from the serial port."""
         print("Starting serial listener")
         while not self.close_port.is_set(): #TODO put a try-except in for potential errors
-            data = self.esp.read_until(b'\n')
-            data.strip(b'\n')
-            if (b'\r' in data):
-                data = data.strip(b'\r')
-            if b'ok' in data:
-                self.waitingForAck.clear()
-                self.commandInvalid.clear()
-            elif b'error' in data:
-                self.commandInvalid.set()
-            print(data)
+            if esp.in_waiting() and not self.serialLock.is_set()
+                data = self.esp.read_until(b'\n')
+                data.strip(b'\n')
+                if (b'\r' in data):
+                    data = data.strip(b'\r')
+                print(data)
 
         print("Stopping serial listener")
         self.esp.flush()
