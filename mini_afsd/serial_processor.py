@@ -13,7 +13,6 @@ class SerialProcessor:
     def __init__(self, controller, port=None, measure_force=True):
         self.controller = controller
         self.esp = None
-        self.labjackHandle = None
         self.port = port
         self.close_port = threading.Event()
         self.waitingForAck = threading.Event()
@@ -70,10 +69,13 @@ class SerialProcessor:
         self.reporter = threading.Thread(target=self.serialReporter, daemon=True)
         self.reporter.start()
 
+        self.status_updater = threading.Thread(target=self.status_update, daemon=True)
+        self.status_updater.start()
+
     def serialListen(self):
         """The event loop for the thread that reads messages from the serial port."""
         print("Starting serial listener")
-        while not self.close_port.is_set(): #TODO put a try-except in for potential errors
+        while not self.close_port.is_set():  # TODO put a try-except in for potential errors
             data = self.esp.read_until(b'\n')
             data.strip(b'\n')
             if (b'\r' in data):
@@ -83,6 +85,9 @@ class SerialProcessor:
                 self.commandInvalid.clear()
             elif b'error' in data:
                 self.commandInvalid.set()
+
+            if not data:
+                continue
             print(data)
 
         print("Stopping serial listener")
@@ -106,7 +111,7 @@ class SerialProcessor:
                         self.waitingForAck.set()
                         self.esp.write(bufferValue)
                         self.esp.write(b'\n')
-                        while (not self.waitingForAck.is_set() or self.commandInvalid.is_set()): #TODO maybe have different flag for if a response is detected
+                        while not self.waitingForAck.is_set() or self.commandInvalid.is_set():  # TODO maybe have different flag for if a response is detected
                             time.sleep(0.01)
                         if not self.commandInvalid.is_set():
                             self.espBuffer.pop(i)
@@ -116,6 +121,12 @@ class SerialProcessor:
                         break
 
             time.sleep(0.01)
+
+    def status_update(self):
+        """Sends and receives querries to the port to receive the position and state of the mill."""
+        while not self.close_port.wait(timeout=0.5):
+            # TODO add b'?' to buffer and query if serialListener has received the output
+            print('reading status now...')
 
     def clear_data(self):
         """Cleans up all of the collected data."""
@@ -149,8 +160,8 @@ class SerialProcessor:
 
         Parameters
         ----------
-        axis : {b'A', b'X', b'Y'}
-            The byte designating which axis to move to zero: X, Y, or A (Z).
+        axis : {b'X', b'Y', b'Z', b'A'}
+            The byte designating which axis to move to zero: X, Y, Z, or A.
         """
         if self.controller.running.is_set():
             message = b"G0 "

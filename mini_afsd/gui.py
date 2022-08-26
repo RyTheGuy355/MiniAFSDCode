@@ -121,20 +121,21 @@ class Gui:
         )
         machineLabel.grid(column=2, row=0, in_=posFrame)
 
-        xLabel = tk.Label(
+        tk.Label(
             text="X", font=("Times New Roman", 18), fg="black", bg="#e3f0fa", width=3, pady=10,
-        )
-        xLabel.grid(column=0, row=1, in_=posFrame)
+        ).grid(column=0, row=1, in_=posFrame)
 
-        yLabel = tk.Label(
+        tk.Label(
             text="Y", font=("Times New Roman", 18), fg="black", bg="#e3f0fa", width=3, pady=10,
-        )
-        yLabel.grid(column=0, row=2, in_=posFrame)
+        ).grid(column=0, row=2, in_=posFrame)
 
-        aLabel = tk.Label(
+        tk.Label(
+            text="Z", font=("Times New Roman", 18), fg="black", bg="#e3f0fa", width=3, pady=10,
+        ).grid(column=0, row=3, in_=posFrame)
+
+        tk.Label(
             text="A", font=("Times New Roman", 18), fg="black", bg="#e3f0fa", width=3, pady=10,
-        )
-        aLabel.grid(column=0, row=3, in_=posFrame)
+        ).grid(column=0, row=4, in_=posFrame)
 
         self.xRelLabel = tk.Label(
             text="+0.000",
@@ -184,6 +185,30 @@ class Gui:
         )
         self.yAbsLabel.grid(column=2, row=2, in_=posFrame)
 
+        self.zRelLabel = tk.Label(
+            text="+0.000",
+            width=8,
+            font=("Times New Roman", 18),
+            fg="black",
+            bg="#EEE",
+            relief="groove",
+            bd=1,
+            pady=6,
+        )
+        self.zRelLabel.grid(column=1, row=3, in_=posFrame)
+
+        self.zAbsLabel = tk.Label(
+            text="+0.000",
+            width=6,
+            font=("Times New Roman", 14),
+            fg="black",
+            bg="#EEE",
+            relief="groove",
+            bd=1,
+            pady=2,
+        )
+        self.zAbsLabel.grid(column=2, row=3, in_=posFrame)
+
         self.aRelLabel = tk.Label(
             text="+0.000",
             width=8,
@@ -194,7 +219,7 @@ class Gui:
             bd=1,
             pady=6,
         )
-        self.aRelLabel.grid(column=1, row=3, in_=posFrame)
+        self.aRelLabel.grid(column=1, row=4, in_=posFrame)
 
         self.aAbsLabel = tk.Label(
             text="+0.000",
@@ -206,7 +231,7 @@ class Gui:
             bd=1,
             pady=2,
         )
-        self.aAbsLabel.grid(column=2, row=3, in_=posFrame)
+        self.aAbsLabel.grid(column=2, row=4, in_=posFrame)
 
         # Create Zero Button Frame Widgets
         zeroXBut = tk.Button(
@@ -233,6 +258,18 @@ class Gui:
         )
         zeroYBut.grid(column=0, row=1, in_=zeroFrame, pady=5)
 
+        zeroZBut = tk.Button(
+            text="Zero Z",
+            font=("Times New Roman", 12),
+            width=7,
+            pady=5,
+            bg="#8f8f8f",
+            fg="black",
+            relief="raised",
+            command=lambda: self.zeroCord(b"Z"),
+        )
+        zeroZBut.grid(column=0, row=2, in_=zeroFrame, pady=5)
+
         zeroABut = tk.Button(
             text="Zero A",
             font=("Times New Roman", 12),
@@ -243,7 +280,7 @@ class Gui:
             relief="raised",
             command=lambda: self.zeroCord(b"A"),
         )
-        zeroABut.grid(column=0, row=2, in_=zeroFrame, pady=5)
+        zeroABut.grid(column=0, row=3, in_=zeroFrame, pady=5)
 
         homeXBut = tk.Button(
             text="Home X",
@@ -269,6 +306,18 @@ class Gui:
         )
         homeYBut.grid(column=1, row=1, in_=zeroFrame, pady=5)
 
+        homeZBut = tk.Button(
+            text="Home Z",
+            font=("Times New Roman", 12),
+            width=7,
+            pady=5,
+            bg="#8f8f8f",
+            fg="black",
+            relief="raised",
+            command=lambda: self.sendCode(b"$HZ", 0)
+        )
+        homeZBut.grid(column=1, row=2, in_=zeroFrame, pady=5)
+
         homeABut = tk.Button(
             text="Home A",
             font=("Times New Roman", 12),
@@ -279,7 +328,7 @@ class Gui:
             relief="raised",
             command=lambda: self.sendCode(b"$HA", 0)
         )
-        homeABut.grid(column=1, row=2, in_=zeroFrame, pady=5)
+        homeABut.grid(column=1, row=3, in_=zeroFrame, pady=5)
 
         homeAllBut = tk.Button(
             text="Home All",
@@ -294,7 +343,7 @@ class Gui:
         homeAllBut.grid(column=2, row=1, in_=zeroFrame, pady=5)
 
         self.enXYBut = tk.Button(
-            text="Enable XYA",
+            text="Enable Axes",
             font=("Times New Roman", 12),
             width=9,
             pady=5,
@@ -304,6 +353,15 @@ class Gui:
             command=self.toggleOutputs,
         )
         self.enXYBut.grid(column=2, row=0, in_=zeroFrame)
+
+        self.cancelJogBut = tk.Button(
+            text="Cancel Jog",
+            font=("Times New Roman bold", 12),
+            bg="#8efa8e",
+            fg="black",
+            command=self.sendCode(b'\x85', 0),
+        )
+        self.cancelJogBut.grid(column=0, row=8, in_=zeroFrame)
 
     def createActuatorFrame(self):
         """Creates the actuator control section of the GUI."""
@@ -853,7 +911,7 @@ class Gui:
 
         Parameters
         ----------
-        axis : {b'A', b'X', b'Y'}
+        axis : {b'X', b'Y', b'Z', b'A'}
             The byte designating which axis to zero.
         """
         if self.controller.serial_processor.esp is not None:
@@ -865,7 +923,7 @@ class Gui:
 
         Parameters
         ----------
-        axis : {b'A', b'X', b'Y'}
+        axis : {b'X', b'Y', b'Z', b'A'}
             The byte designating which axis to move to zero.
         """
         if self.controller.serial_processor.esp is not None:
