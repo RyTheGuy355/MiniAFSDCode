@@ -123,6 +123,7 @@ class SerialProcessor:
         """Sends and receives querries to the port to receive the position and state of the mill."""
         while not self.close_port.wait(timeout=0.5):
             # TODO add b'?' to buffer and query if serialListener has received the output
+
             self.serialUnlocked.wait()
             self.serialUnlocked.clear()
             self.esp.write(b'?')
@@ -136,7 +137,6 @@ class SerialProcessor:
             split = reportString.split("|")
             bufferLength = int(split[2][3 : split[2].index(",")])
             print(bufferLength)
-
 
     def clear_data(self):
         """Cleans up all of the collected data."""
