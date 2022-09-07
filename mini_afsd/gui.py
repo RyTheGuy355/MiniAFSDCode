@@ -587,7 +587,8 @@ class Gui:
     def sendStartStop(self):
         """Sends the code to turn the mill on and off."""
         if not self.controller.running.is_set():
-            self.sendCode(b'$10=3', 0) #Tells qu
+            # b'$10=3' sets the Grbl data that is sent back when querried with b'?'
+            self.sendCode(b'$10=3', 0)
             self.sBut.config(text="Stop Mill", bg="#fc4747")
             self.controller.running.set()
         else:
@@ -901,7 +902,16 @@ class Gui:
                 self.aForceText.set("0.0")
 
     def sendCode(self, code, type):
-        """Sends code to the mill for controlling movement."""
+        """
+        Sends code to the mill for controlling movement if the serial port is connected.
+
+        Parameters
+        ----------
+        code : bytes
+            The byte G-code to send to the serial port.
+        type : {0, 1}
+            0 means send the code immediately and 1 means to wait for acknowledgement.
+        """
         if self.controller.serial_processor.esp is not None:
             self.controller.serial_processor.sendCode(code, type)
 

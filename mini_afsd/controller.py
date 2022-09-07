@@ -123,7 +123,7 @@ class Controller:
 
     def __init__(self, xyStepsPerMil=40, xyPulPerStep=2, aStepsPerMil=1020,
                  aPulPerStep=4, port_regex='(CP21)', connect_serial=True, labjack_force=False,
-                 confirm_run=True):
+                 confirm_run=True, skip_home=False):
         """
         Initializes the object.
 
@@ -150,6 +150,11 @@ class Controller:
         confirm_run : bool, optional
             If True (default), will ask for confirmation for running a GCode file if
             data collection is not turned on; If False, will directly run the GCode.
+        skip_home : bool, optional
+            If True, the serial port will send b'$X' to skip homing and directly
+            be ready to send commands. If False (default), b'$X' or b'$H' (home)
+            will have to be sent manually through the serial port to begin using
+            the mill.
         """
         self.xyPulPerMil = xyStepsPerMil * xyPulPerStep
         self.aPulPerMil = aStepsPerMil * aPulPerStep
@@ -160,7 +165,7 @@ class Controller:
         self.readTempData = Event()
         self.cache_folder = get_save_location()
 
-        self.serial_processor = SerialProcessor(self, None, not labjack_force)
+        self.serial_processor = SerialProcessor(self, None, not labjack_force, skip_home)
         self.labjack_handler = LabjackHandler(self, labjack_force)
 
         self.root = tk.Tk()

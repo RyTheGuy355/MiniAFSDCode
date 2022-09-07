@@ -10,7 +10,24 @@ import serial
 class SerialProcessor:
     """An object for controlling communication to the mill through a serial port."""
 
-    def __init__(self, controller, port=None, measure_force=True):
+    def __init__(self, controller, port=None, measure_force=True, skip_home=False):
+        """
+        Initializes the serial port processor.
+
+        Parameters
+        ----------
+        controller : _type_
+            _description_
+        port : _type_, optional
+            _description_, by default None
+        measure_force : bool, optional
+            _description_, by default True
+        skip_home : bool, optional
+            If True, the serial port will send b'$X' to skip homing and directly
+            be ready to send commands. If False (default), b'$X' or b'$H' (home)
+            will have to be sent manually through the serial port to begin using
+            the mill.
+        """
         self.controller = controller
         self.esp = None
         self.port = port
@@ -23,6 +40,9 @@ class SerialProcessor:
         self.forceData = []
         self.espBuffer = []
         self.espTypeBuffer = []
+
+        if skip_home:
+            self.sendCode(b'$X', 0)
 
     @property
     def port(self):
@@ -105,6 +125,8 @@ class SerialProcessor:
                 ):
                     setAck = not self.waitingForAck.is_set() and self.controller.running.is_set()
                     if typeValue == 0 or setAck:
+                        # TODO change logic and remove setAck; instead, check actual buffer length
+                        # is > 8 (buffer starts at 15; 0-indexed)
                         self.waitingForAck.set()
                         self.esp.write(bufferValue)
                         self.esp.write(b'\n')
@@ -135,7 +157,7 @@ class SerialProcessor:
             reportString = report.decode()
             print(reportString)
             split = reportString.split("|")
-            bufferLength = int(split[2][3 : split[2].index(",")])
+            bufferLength = int(split[2][3:split[2].index(",")])  # TODO check; this errors
             print(bufferLength)
 
     def clear_data(self):
@@ -164,7 +186,7 @@ class SerialProcessor:
             code = b"G92 " + axis + b"0"
             self.sendCode(code, 1)
 
-    def goToZero(self, axis):  # Not Implemented in Arduino Yet
+    def goToZero(self, axis):
         """
         Goes to the zero point for the given axis.
 
@@ -190,7 +212,7 @@ class SerialProcessor:
         code : bytes
             The byte G-code to send to the serial port.
         type : {0, 1}
-            #TODO what does type mean?
+            0 means send the code immediately and 1 means to wait for acknowledgement.
         """
         self.espBuffer.append(code)
         self.espTypeBuffer.append(type)

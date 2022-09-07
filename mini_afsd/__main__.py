@@ -47,10 +47,13 @@ def main():
             'controlling mill movement.'
         )
     )
-    # store_true means default is False and turns to True if flag is specified
     parser.add_argument(
-        '--labjack_force', '-LF', action='store_true',
-        help='If specified, will use the LabJack to measure the force during deposition.'
+        '--labjack_force', '-LF', action='store_false',
+        help='If specified, will not use the LabJack to measure the force during deposition.'
+    )
+    parser.add_argument(
+        '--skip_home', '-SH', action='store_false',
+        help='If specified, will not send b"$X" to skip having the home the mill before use.'
     )
 
     args = parser.parse_args()
@@ -64,7 +67,7 @@ def main():
         xyStepsPerMil=args.xyStepsPerMil, xyPulPerStep=args.xyPulPerStep,
         aStepsPerMil=args.aStepsPerMil, aPulPerStep=args.aPulPerStep,
         port_regex=args.port_regex, connect_serial=args.connect_serial,
-        labjack_force=args.labjack_force
+        labjack_force=args.labjack_force, skip_home=args.skip_home
     ).run()
 
 
