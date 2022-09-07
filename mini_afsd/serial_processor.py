@@ -179,7 +179,7 @@ class SerialProcessor:
                 elif header == 'WCO':
                     work_position = [float(val) for val in values.split(',')]
                 elif header == 'Bf':
-                    buffer_length = values.split(',')[0]
+                    buffer_length = int(values.split(',')[0])
         print(len(total_message))
         print(total_message)
         print(state)
