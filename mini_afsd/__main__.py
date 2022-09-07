@@ -51,9 +51,10 @@ def main():
         '--labjack_force', '-LF', action='store_false',
         help='If specified, will not use the LabJack to measure the force during deposition.'
     )
+    # skip home should default be False and only be set to True for testing
     parser.add_argument(
-        '--skip_home', '-SH', action='store_false',
-        help='If specified, will not send b"$X" to skip having the home the mill before use.'
+        '--skip_home', '-SH', action='store_true',
+        help='If specified, will send b"$X" to skip having the home the mill before use.'
     )
 
     args = parser.parse_args()

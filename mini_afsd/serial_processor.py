@@ -31,6 +31,7 @@ class SerialProcessor:
         self.controller = controller
         self.esp = None
         self.port = port
+        self.buffer_length = 15
         self.close_port = threading.Event()
         self.waitingForAck = threading.Event()
         self.commandInvalid = threading.Event()
@@ -141,6 +142,74 @@ class SerialProcessor:
 
             time.sleep(0.01)
 
+    def parse_state_message(self, message):
+        """
+        Parses the state message output by the serial port by sending b'?'.
+
+
+        Updates the state, positions, and buffer length in the GUI depending
+        on the message contents.
+
+        Parameters
+        ----------
+        message : bytes
+            The state message from the serial port.
+        """
+        state = None
+        machine_position = None
+        work_position = None
+        buffer_length = None
+        total_message = message.decode().split('|')
+        # message is sent as
+        # b'<state|machine positions: x, y, z, a|BF:buffer size|FS:?,?|Work positions(optional):x,y,z,a>'
+        total_message[0] = total_message[0].lstrip('<')
+        total_message[-1] = total_message[-1].rstrip('>')
+        for entry in total_message:
+            if ':' not in entry:  # machine state
+                state = entry
+            else:
+                # headers are 'MPos', 'Bf', 'FS', 'WCO', 'Ov', 'Pn'
+                header, values = entry.split(':')
+                print(header, values)
+                if header == 'MPos':
+                    machine_position = values.split(',')
+                elif header == 'WCO':
+                    work_position = values.split(',')
+                elif header == 'Bf':
+                    buffer_length = values.split(',')[0]
+        print(len(total_message))
+        print(total_message)
+        print(state)
+        if machine_position is not None:
+            xSign = "+" if machine_position[0] >= 0 else ""
+            ySign = "+" if machine_position[1] >= 0 else ""
+            zSign = "+" if machine_position[2] >= 0 else ""
+
+            self.controller.gui.xAbsVar.set(f'{xSign}{machine_position[0]:.3f}')
+            self.controller.gui.yAbsVar.set(f'{ySign}{machine_position[1]:.3f}')
+            self.controller.gui.zAbsVar.set(f'{zSign}{machine_position[2]:.3f}')
+            self.controller.gui.aAbsVar.set(f'{machine_position[3]:.3f}')
+
+            print(machine_position)
+        if work_position is not None:
+            xSign = "+" if work_position[0] >= 0 else ""
+            ySign = "+" if work_position[1] >= 0 else ""
+            zSign = "+" if work_position[2] >= 0 else ""
+
+            self.controller.gui.xRelVar.set(f'{xSign}{work_position[0]:.3f}')
+            self.controller.gui.yRelVar.set(f'{ySign}{work_position[1]:.3f}')
+            self.controller.gui.zRelVar.set(f'{zSign}{work_position[2]:.3f}')
+            self.controller.gui.aRelVar.set(f'{work_position[3]:.3f}')
+
+            print(work_position)
+        if buffer_length is not None:
+            self.controller.gui.bufferVar.set(buffer_length)
+            self.buffer_length = buffer_length
+            print(buffer_length)
+
+        if state is not None:
+            self.controller.gui.stateVar.set(state)
+
     def status_update(self):
         """Sends and receives querries to the port to receive the position and state of the mill."""
         while not self.close_port.wait(timeout=0.5):
@@ -152,13 +221,8 @@ class SerialProcessor:
             self.esp.write(b'/n')
             while not self.esp.in_waiting:
                 time.sleep(0.001)
-            report = self.esp.read_until(b'\n').strip(b'\r\n')
+            self.parse_state_message(self.esp.read_until(b'\n').strip(b'\r\n'))
             self.serialUnlocked.set()
-            reportString = report.decode()
-            print(reportString)
-            split = reportString.split("|")
-            bufferLength = int(split[2][3:split[2].index(",")])  # TODO check; this errors
-            print(bufferLength)
 
     def clear_data(self):
         """Cleans up all of the collected data."""

@@ -24,18 +24,22 @@ class Gui:
         a fixed length of `display_data`.
     displayData : collections.deque
         The temperature data to use for display. Has a fixed length of `display_data`.
-    aAbsLabel : tkinter.Label
+    aAbsVar : tkinter.StringVar
         The label for the absolute position in the actuator direction.
-    aRelLabel : tkinter.Label
+    aRelVar : tkinter.StringVar
         The label for the relative position in the actuator direction.
-    xAbsLabel : tkinter.Label
+    xAbsVar : tkinter.StringVar
         The label for the absolute position in the x-direction.
-    xRelLabel : tkinter.Label
+    xRelVar : tkinter.StringVar
         The label for the relative position in the x-direction.
-    yAbsLabel : tkinter.Label
+    yAbsVar : tkinter.StringVar
         The label for the absolute position in the y-direction.
-    yRelLabel : tkinter.Label
+    yRelVar : tkinter.StringVar
         The label for the relative position in the y-direction.
+    zAbsVar : tkinter.StringVar
+        The label for the absolute position in the z-direction.
+    zRelVar : tkinter.StringVar
+        The label for the relative position in the z-direction.
     topFrame : tkinter.Frame
         The frame for the actuator, traversal, and save frames.
     botFrame : tkinter.Frame
@@ -137,8 +141,17 @@ class Gui:
             text="A", font=("Times New Roman", 18), fg="black", bg="#e3f0fa", width=3, pady=10,
         ).grid(column=0, row=4, in_=posFrame)
 
-        self.xRelLabel = tk.Label(
-            text="+0.000",
+        tk.Label(
+            text="State", font=("Times New Roman", 18), fg="black", bg="#e3f0fa", width=10, pady=10,
+        ).grid(column=0, row=5, in_=posFrame)
+
+        tk.Label(
+            text="Buffer", font=("Times New Roman", 18), fg="black", bg="#e3f0fa", width=10, pady=10,
+        ).grid(column=0, row=6, in_=posFrame)
+
+        self.xRelVar = tk.StringVar(value='+0.000')
+        xRelLabel = tk.Label(
+            textvariable=self.xRelVar,
             width=8,
             font=("Times New Roman", 18),
             fg="black",
@@ -147,10 +160,11 @@ class Gui:
             bd=1,
             pady=6,
         )
-        self.xRelLabel.grid(column=1, row=1, in_=posFrame)
+        xRelLabel.grid(column=1, row=1, in_=posFrame)
 
-        self.xAbsLabel = tk.Label(
-            text="+0.000",
+        self.xAbsVar = tk.StringVar(value='+0.000')
+        xAbsLabel = tk.Label(
+            textvariable=self.xAbsVar,
             width=6,
             font=("Times New Roman", 14),
             fg="black",
@@ -159,10 +173,11 @@ class Gui:
             bd=1,
             pady=2,
         )
-        self.xAbsLabel.grid(column=2, row=1, in_=posFrame)
+        xAbsLabel.grid(column=2, row=1, in_=posFrame)
 
-        self.yRelLabel = tk.Label(
-            text="+0.000",
+        self.yRelVar = tk.StringVar(value='+0.000')
+        yRelLabel = tk.Label(
+            textvariable=self.yRelVar,
             width=8,
             font=("Times New Roman", 18),
             fg="black",
@@ -171,10 +186,11 @@ class Gui:
             bd=1,
             pady=6,
         )
-        self.yRelLabel.grid(column=1, row=2, in_=posFrame)
+        yRelLabel.grid(column=1, row=2, in_=posFrame)
 
-        self.yAbsLabel = tk.Label(
-            text="+0.000",
+        self.yAbsVar = tk.StringVar(value='+0.000')
+        yAbsLabel = tk.Label(
+            textvariable=self.yAbsVar,
             width=6,
             font=("Times New Roman", 14),
             fg="black",
@@ -183,10 +199,11 @@ class Gui:
             bd=1,
             pady=2,
         )
-        self.yAbsLabel.grid(column=2, row=2, in_=posFrame)
+        yAbsLabel.grid(column=2, row=2, in_=posFrame)
 
-        self.zRelLabel = tk.Label(
-            text="+0.000",
+        self.zRelVar = tk.StringVar(value='+0.000')
+        zRelLabel = tk.Label(
+            textvariable=self.zRelVar,
             width=8,
             font=("Times New Roman", 18),
             fg="black",
@@ -195,10 +212,11 @@ class Gui:
             bd=1,
             pady=6,
         )
-        self.zRelLabel.grid(column=1, row=3, in_=posFrame)
+        zRelLabel.grid(column=1, row=3, in_=posFrame)
 
-        self.zAbsLabel = tk.Label(
-            text="+0.000",
+        self.zAbsVar = tk.StringVar(value='+0.000')
+        zAbsLabel = tk.Label(
+            textvariable=self.zAbsVar,
             width=6,
             font=("Times New Roman", 14),
             fg="black",
@@ -207,10 +225,11 @@ class Gui:
             bd=1,
             pady=2,
         )
-        self.zAbsLabel.grid(column=2, row=3, in_=posFrame)
+        zAbsLabel.grid(column=2, row=3, in_=posFrame)
 
-        self.aRelLabel = tk.Label(
-            text="+0.000",
+        self.aRelVar = tk.StringVar(value='+0.000')
+        aRelLabel = tk.Label(
+            textvariable=self.aRelVar,
             width=8,
             font=("Times New Roman", 18),
             fg="black",
@@ -219,10 +238,11 @@ class Gui:
             bd=1,
             pady=6,
         )
-        self.aRelLabel.grid(column=1, row=4, in_=posFrame)
+        aRelLabel.grid(column=1, row=4, in_=posFrame)
 
-        self.aAbsLabel = tk.Label(
-            text="+0.000",
+        self.aAbsVar = tk.StringVar(value='+0.000')
+        aAbsLabel = tk.Label(
+            textvariable=self.aAbsVar,
             width=6,
             font=("Times New Roman", 14),
             fg="black",
@@ -231,7 +251,33 @@ class Gui:
             bd=1,
             pady=2,
         )
-        self.aAbsLabel.grid(column=2, row=4, in_=posFrame)
+        aAbsLabel.grid(column=2, row=4, in_=posFrame)
+
+        self.stateVar = tk.StringVar(value='Idle')
+        stateLabel = tk.Label(
+            textvariable=self.stateVar,
+            width=8,
+            font=("Times New Roman", 18),
+            fg="black",
+            bg="#EEE",
+            relief="groove",
+            bd=1,
+            pady=6,
+        )
+        stateLabel.grid(column=1, row=5, in_=posFrame)
+
+        self.bufferVar = tk.IntVar(value='15')
+        bufferLabel = tk.Label(
+            textvariable=self.bufferVar,
+            width=8,
+            font=("Times New Roman", 18),
+            fg="black",
+            bg="#EEE",
+            relief="groove",
+            bd=1,
+            pady=6,
+        )
+        bufferLabel.grid(column=1, row=6, in_=posFrame)
 
         # Create Zero Button Frame Widgets
         zeroXBut = tk.Button(
@@ -361,7 +407,7 @@ class Gui:
             fg="black",
             command=self.sendCode(b'\x85', 0),
         )
-        self.cancelJogBut.grid(column=0, row=8, in_=zeroFrame)
+        self.cancelJogBut.grid(column=2, row=4, in_=zeroFrame)
 
     def createActuatorFrame(self):
         """Creates the actuator control section of the GUI."""
@@ -880,11 +926,11 @@ class Gui:
             aRelPos = struct.unpack("i", aPos)[0] / self.controller.aPulPerMil
 
             xRelSign = "+" if xRelPos >= 0 else ""
-            self.xRelLabel["text"] = f"{xRelSign}{xRelPos:.3f}"
+            self.xRelVar.set(f"{xRelSign}{xRelPos:.3f}")
             yRelSign = "+" if yRelPos >= 0 else ""
-            self.yRelLabel["text"] = f"{yRelSign}{yRelPos:.3f}"
+            self.yRelVar.set(f"{yRelSign}{yRelPos:.3f}")
             aRelSign = "+" if aRelPos >= 0 else ""
-            self.aRelLabel["text"] = f"{aRelSign}{aRelPos:.3f}"
+            self.aRelVar.set(f"{aRelSign}{aRelPos:.3f}")
         except Exception:
             print("There was a position error")
             print(data)
