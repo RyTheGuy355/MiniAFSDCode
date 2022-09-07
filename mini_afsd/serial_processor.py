@@ -169,12 +169,15 @@ class SerialProcessor:
                 state = entry
             else:
                 # headers are 'MPos', 'Bf', 'FS', 'WCO', 'Ov', 'Pn'
-                header, values = entry.split(':')
+                try:
+                    header, values = entry.split(':')
+                except ValueError:  # message has multiple : at startup
+                    break
                 print(header, values)
                 if header == 'MPos':
-                    machine_position = values.split(',')
+                    machine_position = [float(val) for val in values.split(',')]
                 elif header == 'WCO':
-                    work_position = values.split(',')
+                    work_position = [float(val) for val in values.split(',')]
                 elif header == 'Bf':
                     buffer_length = values.split(',')[0]
         print(len(total_message))
