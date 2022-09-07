@@ -32,6 +32,7 @@ class SerialProcessor:
         self.esp = None
         self.port = port
         self.buffer_length = 15
+        self.work_offsets = (0, 0, 0, 0)
         self.close_port = threading.Event()
         self.waitingForAck = threading.Event()
         self.commandInvalid = threading.Event()
@@ -125,7 +126,7 @@ class SerialProcessor:
                     zip(self.espBuffer, self.espTypeBuffer)
                 ):
                     setAck = not self.waitingForAck.is_set() and self.controller.running.is_set()
-                    if typeValue == 0 or setAck:
+                    if typeValue == 0 or self.buffer_length > 8:
                         # TODO change logic and remove setAck; instead, check actual buffer length
                         # is > 8 (buffer starts at 15; 0-indexed)
                         self.waitingForAck.set()
@@ -136,6 +137,7 @@ class SerialProcessor:
                         if not self.commandInvalid.is_set():
                             self.espBuffer.pop(i)
                             self.espTypeBuffer.pop(i)
+                            self.buffer_length += 1
                             if setAck:
                                 self.waitingForAck.set()
                         break
@@ -172,43 +174,53 @@ class SerialProcessor:
                 try:
                     header, values = entry.split(':')
                 except ValueError:  # message has multiple : at startup
+                    print(f'Encountered parsing error from: {entry}')
                     break
-                print(header, values)
                 if header == 'MPos':
                     machine_position = [float(val) for val in values.split(',')]
                 elif header == 'WCO':
                     work_position = [float(val) for val in values.split(',')]
                 elif header == 'Bf':
                     buffer_length = int(values.split(',')[0])
-        print(len(total_message))
-        print(total_message)
-        print(state)
+        # print(message.decode())
         if machine_position is not None:
+            machine_x = machine_position[0]
+            machine_y = machine_position[1]
+            machine_z = machine_position[2]
+            machine_a = machine_position[3]
             xSign = "+" if machine_position[0] >= 0 else ""
             ySign = "+" if machine_position[1] >= 0 else ""
             zSign = "+" if machine_position[2] >= 0 else ""
+            aSign = "+" if machine_position[3] >= 0 else ""
 
             self.controller.gui.xAbsVar.set(f'{xSign}{machine_position[0]:.3f}')
             self.controller.gui.yAbsVar.set(f'{ySign}{machine_position[1]:.3f}')
             self.controller.gui.zAbsVar.set(f'{zSign}{machine_position[2]:.3f}')
-            self.controller.gui.aAbsVar.set(f'{machine_position[3]:.3f}')
+            self.controller.gui.aAbsVar.set(f'{aSign}{machine_position[3]:.3f}')
 
-            print(machine_position)
-        if work_position is not None:
-            xSign = "+" if work_position[0] >= 0 else ""
-            ySign = "+" if work_position[1] >= 0 else ""
-            zSign = "+" if work_position[2] >= 0 else ""
+            if work_position is None:
+                work_position = self.work_offsets
+            else:
+                self.work_offsets = work_position
 
-            self.controller.gui.xRelVar.set(f'{xSign}{work_position[0]:.3f}')
-            self.controller.gui.yRelVar.set(f'{ySign}{work_position[1]:.3f}')
-            self.controller.gui.zRelVar.set(f'{zSign}{work_position[2]:.3f}')
-            self.controller.gui.aRelVar.set(f'{work_position[3]:.3f}')
+            rel_x, rel_y, rel_z, rel_a = work_position
+            work_x = machine_x - rel_x
+            work_y = machine_y - rel_y
+            work_z = machine_z - rel_z
+            work_a = machine_a - rel_a
+            xSign = "+" if work_x >= 0 else ""
+            ySign = "+" if work_y >= 0 else ""
+            zSign = "+" if work_z >= 0 else ""
+            aSign = "+" if work_a >= 0 else ""
 
-            print(work_position)
+            self.controller.gui.xRelVar.set(f'{xSign}{work_x:.3f}')
+            self.controller.gui.yRelVar.set(f'{ySign}{work_y:.3f}')
+            self.controller.gui.zRelVar.set(f'{zSign}{work_z:.3f}')
+            self.controller.gui.aRelVar.set(f'{aSign}{work_a:.3f}')
+
         if buffer_length is not None:
             self.controller.gui.bufferVar.set(buffer_length)
             self.buffer_length = buffer_length
-            print(buffer_length)
 
         if state is not None:
             self.controller.gui.stateVar.set(state)
@@ -216,15 +228,13 @@ class SerialProcessor:
     def status_update(self):
         """Sends and receives querries to the port to receive the position and state of the mill."""
         while not self.close_port.wait(timeout=0.5):
-            # TODO add b'?' to buffer and query if serialListener has received the output
-
+            if not self.controller.running.wait(timeout=0.5):
+                continue
             self.serialUnlocked.wait()
             self.serialUnlocked.clear()
             self.esp.write(b'?')
-            self.esp.write(b'/n')
-            while not self.esp.in_waiting:
-                time.sleep(0.001)
-            self.parse_state_message(self.esp.read_until(b'\n').strip(b'\r\n'))
+            message = self.esp.read_until(b'\n').strip(b'\r\n')
+            self.parse_state_message(message)
             self.serialUnlocked.set()
 
     def clear_data(self):
@@ -251,7 +261,7 @@ class SerialProcessor:
         """
         if self.controller.running.is_set():
             code = b"G92 " + axis + b"0"
-            self.sendCode(code, 1)
+            self.sendCode(code, 0)
 
     def goToZero(self, axis):
         """
@@ -283,4 +293,5 @@ class SerialProcessor:
         """
         self.espBuffer.append(code)
         self.espTypeBuffer.append(type)
-        print(len(self.espBuffer))
+        print(f'added to buffer: {code}')
+        print(f'internal buffer: {len(self.espBuffer)}')

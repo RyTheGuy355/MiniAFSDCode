@@ -102,7 +102,7 @@ class Gui:
         tFrame.grid_propagate(0)
 
         # Create Main Frames
-        posFrame = tk.Frame(width=235, height=175, bg="#e3f0fa", padx=2, pady=2,)
+        posFrame = tk.Frame(width=240, height=175, bg="#e3f0fa", padx=2, pady=2,)
         posFrame.grid_propagate(0)
         posFrame.grid(column=0, row=0, in_=tFrame)
 
@@ -142,11 +142,11 @@ class Gui:
         ).grid(column=0, row=4, in_=posFrame)
 
         tk.Label(
-            text="State", font=("Times New Roman", 18), fg="black", bg="#e3f0fa", width=10, pady=10,
+            text="State", font=("Times New Roman", 18), fg="black", bg="#e3f0fa", width=5, pady=10,
         ).grid(column=0, row=5, in_=posFrame)
 
         tk.Label(
-            text="Buffer", font=("Times New Roman", 18), fg="black", bg="#e3f0fa", width=10, pady=10,
+            text="Buffer", font=("Times New Roman", 18), fg="black", bg="#e3f0fa", width=5, pady=10,
         ).grid(column=0, row=6, in_=posFrame)
 
         self.xRelVar = tk.StringVar(value='+0.000')
@@ -389,14 +389,14 @@ class Gui:
         homeAllBut.grid(column=2, row=1, in_=zeroFrame, pady=5)
 
         self.enXYBut = tk.Button(
-            text="Enable Axes",
+            text="Disable Drives",
             font=("Times New Roman", 12),
             width=9,
             pady=5,
             bg="#8efa8e",
             fg="black",
             relief="raised",
-            command=self.toggleOutputs,
+            command=lambda: self.sendCode(b"$MD", 0),
         )
         self.enXYBut.grid(column=2, row=0, in_=zeroFrame)
 
@@ -405,7 +405,7 @@ class Gui:
             font=("Times New Roman bold", 12),
             bg="#8efa8e",
             fg="black",
-            command=self.sendCode(b'\x85', 0),
+            command=lambda: self.sendCode(b'\x85', 0),
         )
         self.cancelJogBut.grid(column=2, row=4, in_=zeroFrame)
 
@@ -645,18 +645,6 @@ class Gui:
             self.sBut.config(text="Start Mill", bg="#8efa8e")
             self.enXYBut.config(text="Enable XYA", bg="#8efa8e")
             self.controller.running.clear()
-
-    def toggleOutputs(self):
-        """Toggles the buttons for X, Y, and A states."""
-        if self.controller.running.is_set():
-            if self.enXYBut["text"] == "Disable XYA":
-                self.enXYBut.config(text="Enable XYA", bg="#8efa8e")
-                self.sendCode(b"M18 X Y", 0)
-                self.sendCode(b"M18 A", 0)
-            else:
-                self.enXYBut.config(text="Disable XYA", bg="#ff475d")
-                self.sendCode(b"M17 X Y", 0)
-                self.sendCode(b"M17 A", 0)
 
     def saveFile(self, source=None):
         """
