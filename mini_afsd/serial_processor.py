@@ -149,14 +149,10 @@ class SerialProcessor:
                     if (not wait_in_queue and self.buffer_length > 1) or self.buffer_length > 8:
                         self.esp.write(bufferValue)
                         self.esp.write(b'\n')
-                        while not self.commandInvalid.is_set():
-                            time.sleep(0.01)
-                        if not self.commandInvalid.is_set():
-                            self.espBuffer.pop(i)
-                            self.espTypeBuffer.pop(i)
-                            self.buffer_length += 1
+                        self.espBuffer.pop(i)
+                        self.espTypeBuffer.pop(i)
+                        self.buffer_length += 1
                         break
-
             time.sleep(0.01)
 
     def parse_state_message(self, message):

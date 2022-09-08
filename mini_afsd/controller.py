@@ -159,8 +159,6 @@ class Controller:
         """
         self.xyPulPerMil = xyStepsPerMil * xyPulPerStep
         self.aPulPerMil = aStepsPerMil * aPulPerStep
-        self.startTime = time.time()
-        self.timeData = []
         self.running = Event()
         self.collecting = Event()
         self.readTempData = Event()
@@ -261,7 +259,7 @@ class Controller:
 
     def on_closing(self):
         """Tries to save unsaved data before closing."""
-        if not self.timeData:
+        if not self.labjack_handler.timeData:
             self.closeAll()
         else:
             askSaveWin = tk.Toplevel(self.root, takefocus=True)
@@ -312,15 +310,15 @@ class Controller:
             else:
                 forceData = self.serial_processor.forceData
             combinedData = zip(
-                self.timeData,
+                self.labjack_handler.timeData,
                 forceData,
                 self.labjack_handler.TC_one_Data,
                 self.labjack_handler.TC_two_Data
             )
         elif not self.labjack_handler.measure_force:
-            combinedData = zip(self.timeData, self.serial_processor.forceData)
+            combinedData = zip(self.labjack_handler.timeData, self.serial_processor.forceData)
         else:
-            combinedData = self.timeData  # should never be reached, but just in case
+            combinedData = None  # should never be reached, but just in case
 
         return combinedData
 

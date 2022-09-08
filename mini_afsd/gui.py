@@ -669,18 +669,13 @@ class Gui:
             print("There was an error saving the file.")
         else:  # only clear data when the save is successful
             self.clearAllData(source)
-            self.controller.serial_processor.clear_data()
+            print("Hi")
             self.clearDataBut.configure(fg="grey", command='')
             self.saveDataBut.configure(fg="grey", command='')
-            self.controller.startTime = 0
-            if source is not None:
-                source.destroy()
 
     def startStopData(self):
         """Toggles data collection events and GUI elements."""
         if "Start" in self.startStopDataBut["text"]:
-            if not self.controller.startTime:
-                self.controller.startTime = time.time()
             self.controller.collecting.set()
             self.startStopDataBut.config(text="Stop Data Collection", bg="#ff475d")
 
@@ -729,7 +724,6 @@ class Gui:
     def clearAllData(self, source=None):
         """Clears all collected data and resets GUI elements."""
         self.controller.clear_data()
-        self.controller.startTime = 0
         self.clearDataBut.configure(fg="grey", command='')
         self.saveDataBut.configure(fg="grey", command='')
         if source is not None:
@@ -737,7 +731,7 @@ class Gui:
 
     def clearDataPrompt(self):
         """Asks to save data when closing the window."""
-        if not self.controller.timeData:
+        if not self.labjack_handler.timeData:
             self.clearAllData()
         else:
             askSaveWin = tk.Toplevel(self.controller.root, takefocus=True)

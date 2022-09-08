@@ -25,6 +25,9 @@ class LabjackHandler:
         self.labjackHandle = None
         self.labjackThread = None
         self.measure_force = measure_force
+        self.numDataAvg = 10
+        self.startTime = 0
+        self.timeData = []
 
         self.forceData = []
         self.TC_one_Data = []
@@ -49,19 +52,19 @@ class LabjackHandler:
         numFrames = 3
         addresses = [7002, 7004, 26]  # AIN1, AIN2
         dataTypes = [ljm.constants.FLOAT32, ljm.constants.FLOAT32, ljm.constants.FLOAT32]
+        ljm.eWriteAddresses(
+            self.labjackHandle, 4, [9002, 9004, 9302, 9304],
+            [ljm.constants.UINT32,ljm.constants.UINT32, ljm.constants.UINT32, ljm.constants.UINT32],
+            [22, 22, 1, 1]
+        )
         while True:
-            if self.controller.running.wait(timeout=1):
+            if self.controller.collecting.wait(timeout=1):
+                self.startTime = time.time()
                 ljm.eWriteAddress(self.labjackHandle, 1000, ljm.constants.FLOAT32, 2.67)
                 #Made from trial and error, sets the AIN pins for the thermocouples to output compensated temperatures in C
-                ljm.eWriteAddresses(
-                    self.labjackHandle, 4, [9002, 9004, 9302, 9304],
-                    [ljm.constants.UINT32,ljm.constants.UINT32, ljm.constants.UINT32, ljm.constants.UINT32],
-                    [22, 22, 1, 1]
-                )
                 avgNum = 0
                 avgResults = [0,0,0]
-                numAvg = 10
-                while self.controller.running.is_set():
+                while self.controller.collecting.is_set():
                     try:
                         results = ljm.eReadAddresses(
                             self.labjackHandle, numFrames, addresses, dataTypes
@@ -70,10 +73,10 @@ class LabjackHandler:
                         avgResults[1] += results[1]
                         avgResults[2] += results[2]
                         avgNum += 1
-                        if (avgNum == numAvg):
-                            avgResults[0] /= numAvg
-                            avgResults[1] /= numAvg
-                            avgResults[2] /= numAvg
+                        if (avgNum == self.numDataAvg):
+                            avgResults[0] /= self.numDataAvg
+                            avgResults[1] /= self.numDataAvg
+                            avgResults[2] /= self.numDataAvg
                             force = (avgResults[2]-0.5)*333.61
                             self.TC_one_Data.append(avgResults[0])
                             self.TC_two_Data.append(avgResults[1])
@@ -81,12 +84,13 @@ class LabjackHandler:
                             self.controller.gui.tcOneVariable.set(round(avgResults[0], 2))
                             self.controller.gui.tcTwoVariable.set(round(avgResults[1], 2))
                             self.controller.gui.display(force)
-                            self.controller.timeData.append(
-                                round(time.time() - self.controller.startTime, 2)
+                            self.timeData.append(
+                                round(time.time() - self.startTime, 2)
                             )
                             self.controller.gui.display(force)
                             avgResults = [0,0,0]
                             avgNum = 0
+                            print(self.timeData[-1])
                     except KeyboardInterrupt:
                         break
                     except Exception as ex:
@@ -97,7 +101,6 @@ class LabjackHandler:
                         while not self.controller.readTempData.wait(timeout=0.01):
                             if not self.controller.running.is_set():
                                 break
-                    time.sleep(0.025)
                 ljm.eWriteAddress(self.labjackHandle, 1000, ljm.constants.FLOAT32, 0)
             else:
                 results = ljm.eReadAddresses(self.labjackHandle, numFrames, addresses, dataTypes)
@@ -108,9 +111,10 @@ class LabjackHandler:
 
     def clear_data(self):
         """Cleans up all of the collected data."""
-        self.forceData.clear()
-        self.TC_one_Data.clear()
-        self.TC_two_Data.clear()
+        self.forceData = []
+        self.TC_one_Data = []
+        self.TC_two_Data = []
+        self.timeData = []
 
     def close(self):
         """Ensures the Labjack is closed correctly."""
