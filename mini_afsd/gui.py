@@ -336,7 +336,7 @@ class Gui:
             bg="#8f8f8f",
             fg="black",
             relief="raised",
-            command=lambda: self.sendCode(b"$HX", 0)
+            command=lambda: self.sendCode(b"$HX", False)
         )
         homeXBut.grid(column=1, row=0, in_=zeroFrame, pady=5, padx=5)
 
@@ -348,7 +348,7 @@ class Gui:
             bg="#8f8f8f",
             fg="black",
             relief="raised",
-            command=lambda: self.sendCode(b"$HY", 0)
+            command=lambda: self.sendCode(b"$HY", False)
         )
         homeYBut.grid(column=1, row=1, in_=zeroFrame, pady=5)
 
@@ -360,7 +360,7 @@ class Gui:
             bg="#8f8f8f",
             fg="black",
             relief="raised",
-            command=lambda: self.sendCode(b"$HZ", 0)
+            command=lambda: self.sendCode(b"$HZ", False)
         )
         homeZBut.grid(column=1, row=2, in_=zeroFrame, pady=5)
 
@@ -372,7 +372,7 @@ class Gui:
             bg="#8f8f8f",
             fg="black",
             relief="raised",
-            command=lambda: self.sendCode(b"$HA", 0)
+            command=lambda: self.sendCode(b"$HA", False)
         )
         homeABut.grid(column=1, row=3, in_=zeroFrame, pady=5)
 
@@ -384,7 +384,7 @@ class Gui:
             bg="#91ceff",
             fg="black",
             relief="raised",
-            command=lambda: self.sendCode(b"$H", 0)
+            command=lambda: self.sendCode(b"$H", False)
         )
         homeAllBut.grid(column=2, row=1, in_=zeroFrame, pady=5)
 
@@ -396,7 +396,7 @@ class Gui:
             bg="#8efa8e",
             fg="black",
             relief="raised",
-            command=lambda: self.sendCode(b"$MD", 0),
+            command=lambda: self.sendCode(b"$MD", False),
         )
         self.enXYBut.grid(column=2, row=0, in_=zeroFrame)
 
@@ -405,7 +405,7 @@ class Gui:
             font=("Times New Roman bold", 12),
             bg="#8efa8e",
             fg="black",
-            command=lambda: self.sendCode(b'\x85', 0),
+            command=lambda: self.sendCode(b'\x85', False),
         )
         self.cancelJogBut.grid(column=2, row=4, in_=zeroFrame)
 
@@ -634,14 +634,13 @@ class Gui:
         """Sends the code to turn the mill on and off."""
         if not self.controller.running.is_set():
             # b'$10=3' sets the Grbl data that is sent back when querried with b'?'
-            self.sendCode(b'$10=3', 0)
+            self.sendCode(b'$10=3', False)
             self.sBut.config(text="Stop Mill", bg="#fc4747")
             self.controller.running.set()
         else:
             self.controller.serial_processor.espBuffer.clear()
             self.controller.serial_processor.espTypeBuffer.clear()
-            self.controller.serial_processor.waitingForAck.clear()
-            self.sendCode(b'\x85', 0)
+            self.sendCode(b'\x85', False)
             self.sBut.config(text="Start Mill", bg="#8efa8e")
             self.enXYBut.config(text="Enable XYA", bg="#8efa8e")
             self.controller.running.clear()
@@ -664,7 +663,7 @@ class Gui:
         try:
             with open(filename, 'w', newline='') as f:
                 writer = csv.writer(f)
-                writer.writerows(self.controller.serial_processor.return_data())
+                writer.writerows(self.controller.return_data())
         except PermissionError:
             print("File is currently open")
         except Exception:
@@ -779,7 +778,7 @@ class Gui:
             if self.controller.running.is_set():
                 try:
                     if int(event.type) == 3:
-                        self.sendCode(gcode.upper().encode(), 0)
+                        self.sendCode(gcode.upper().encode(), False)
                 except Exception:
                     print("There was an exception?")
             else:
@@ -931,11 +930,11 @@ class Gui:
                 self.aForceText.set(f"{maxForce:.1f}")
                 code = b'G12 L'
                 code += str(maxForce).encode('utf-8')
-                self.sendCode(code, 1)
+                self.sendCode(code, True)
             except Exception:
                 self.aForceText.set("0.0")
 
-    def sendCode(self, code, type):
+    def sendCode(self, code, wait_in_queue):
         """
         Sends code to the mill for controlling movement if the serial port is connected.
 
@@ -943,11 +942,12 @@ class Gui:
         ----------
         code : bytes
             The byte G-code to send to the serial port.
-        type : {0, 1}
-            0 means send the code immediately and 1 means to wait for acknowledgement.
+        wait_in_queue : bool
+            False means send the code immediately and True means to wait for the
+            buffer to be open.
         """
         if self.controller.serial_processor.esp is not None:
-            self.controller.serial_processor.sendCode(code, type)
+            self.controller.serial_processor.sendCode(code, wait_in_queue)
 
     def zeroCord(self, axis):
         """

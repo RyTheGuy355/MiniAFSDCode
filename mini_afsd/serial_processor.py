@@ -32,9 +32,9 @@ class SerialProcessor:
         self.esp = None
         self.port = port
         self.buffer_length = 15
+        self.state = 'Idle'
         self.work_offsets = (0, 0, 0, 0)
         self.close_port = threading.Event()
-        self.waitingForAck = threading.Event()
         self.commandInvalid = threading.Event()
         self.serialUnlocked = threading.Event()
         self.serialUnlocked.set()
@@ -44,7 +44,7 @@ class SerialProcessor:
         self.espTypeBuffer = []
 
         if skip_home:
-            self.sendCode(b'$X', 0)
+            self.sendCode(b'$X', False)
 
     @property
     def port(self):
@@ -122,24 +122,19 @@ class SerialProcessor:
         print("Starting serial reporter")
         while self.esp.is_open:
             if len(self.espBuffer) > 0:
-                for i, (bufferValue, typeValue) in enumerate(
+                for i, (bufferValue, wait_in_queue) in enumerate(
                     zip(self.espBuffer, self.espTypeBuffer)
                 ):
-                    setAck = not self.waitingForAck.is_set() and self.controller.running.is_set()
-                    if typeValue == 0 or self.buffer_length > 8:
-                        # TODO change logic and remove setAck; instead, check actual buffer length
-                        # is > 8 (buffer starts at 15; 0-indexed)
-                        self.waitingForAck.set()
+                    # TODO should still check self.controller.running.is_set()?
+                    if (not wait_in_queue and self.buffer_length > 1) or self.buffer_length > 8:
                         self.esp.write(bufferValue)
                         self.esp.write(b'\n')
-                        while not self.waitingForAck.is_set() or self.commandInvalid.is_set():  # TODO maybe have different flag for if a response is detected
+                        while not self.commandInvalid.is_set():
                             time.sleep(0.01)
                         if not self.commandInvalid.is_set():
                             self.espBuffer.pop(i)
                             self.espTypeBuffer.pop(i)
                             self.buffer_length += 1
-                            if setAck:
-                                self.waitingForAck.set()
                         break
 
             time.sleep(0.01)
@@ -147,7 +142,6 @@ class SerialProcessor:
     def parse_state_message(self, message):
         """
         Parses the state message output by the serial port by sending b'?'.
-
 
         Updates the state, positions, and buffer length in the GUI depending
         on the message contents.
@@ -168,7 +162,7 @@ class SerialProcessor:
         total_message[-1] = total_message[-1].rstrip('>')
         for entry in total_message:
             if ':' not in entry:  # machine state
-                state = entry
+                self.state = entry
             else:
                 # headers are 'MPos', 'Bf', 'FS', 'WCO', 'Ov', 'Pn'
                 try:
@@ -222,8 +216,7 @@ class SerialProcessor:
             self.controller.gui.bufferVar.set(buffer_length)
             self.buffer_length = buffer_length
 
-        if state is not None:
-            self.controller.gui.stateVar.set(state)
+        self.controller.gui.stateVar.set(self.state)
 
     def status_update(self):
         """Sends and receives querries to the port to receive the position and state of the mill."""
@@ -261,7 +254,7 @@ class SerialProcessor:
         """
         if self.controller.running.is_set():
             code = b"G92 " + axis + b"0"
-            self.sendCode(code, 0)
+            self.sendCode(code, False)
 
     def goToZero(self, axis):
         """
@@ -278,9 +271,9 @@ class SerialProcessor:
                 message = message + axis + b"0"
             else:
                 message = message + b"X0 Y0 A0"
-            self.sendCode(message, 1)
+            self.sendCode(message, True)
 
-    def sendCode(self, code, type):
+    def sendCode(self, code, wait_in_queue):
         """
         Sends the specified code the the ESP.
 
@@ -288,10 +281,11 @@ class SerialProcessor:
         ----------
         code : bytes
             The byte G-code to send to the serial port.
-        type : {0, 1}
-            0 means send the code immediately and 1 means to wait for acknowledgement.
+        wait_in_queue : bool
+            False means send the code immediately and True means to wait for the
+            buffer to be open.
         """
         self.espBuffer.append(code)
-        self.espTypeBuffer.append(type)
+        self.espTypeBuffer.append(wait_in_queue)
         print(f'added to buffer: {code}')
         print(f'internal buffer: {len(self.espBuffer)}')
