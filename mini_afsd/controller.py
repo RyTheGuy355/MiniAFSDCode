@@ -43,6 +43,7 @@ from pathlib import Path
 import sys
 from threading import Event
 import tkinter as tk
+import time
 
 import serial
 from serial.tools import list_ports
@@ -158,7 +159,7 @@ class Controller:
         """
         self.xyPulPerMil = xyStepsPerMil * xyPulPerStep
         self.aPulPerMil = aStepsPerMil * aPulPerStep
-        self.startTime = 0
+        self.startTime = time.time()
         self.timeData = []
         self.running = Event()
         self.collecting = Event()

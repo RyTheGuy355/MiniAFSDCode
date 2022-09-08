@@ -276,23 +276,6 @@ class SerialProcessor:
             code = b"G92 " + axis + b"0"
             self.sendCode(code, False)
 
-    def goToZero(self, axis):
-        """
-        Goes to the zero point for the given axis.
-
-        Parameters
-        ----------
-        axis : {b'X', b'Y', b'Z', b'A'}
-            The byte designating which axis to move to zero: X, Y, Z, or A.
-        """
-        if self.controller.running.is_set():
-            message = b"G0 "
-            if axis != 3:
-                message = message + axis + b"0"
-            else:
-                message = message + b"X0 Y0 A0"
-            self.sendCode(message, True)
-
     def sendCode(self, code, wait_in_queue):
         """
         Sends the specified code the the ESP.

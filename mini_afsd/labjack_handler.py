@@ -45,9 +45,9 @@ class LabjackHandler:
 
     def startLabjack(self):
         """The thread for reading data from the LabJack."""
-        numFrames = 2
-        addresses = [7002, 7004]  # AIN1, AIN2
-        dataTypes = [ljm.constants.FLOAT32, ljm.constants.FLOAT32]
+        numFrames = 3
+        addresses = [7002, 7004, 26]  # AIN1, AIN2
+        dataTypes = [ljm.constants.FLOAT32, ljm.constants.FLOAT32, ljm.constants.FLOAT32]
         while True:
             if self.controller.running.wait(timeout=1):
                 ljm.eWriteAddress(self.labjackHandle, 1000, ljm.constants.FLOAT32, 2.67)
@@ -56,14 +56,19 @@ class LabjackHandler:
                         while not self.controller.readTempData.wait(timeout=0.05):  # TODO what does readTempData mean vs running?
                             if not self.controller.running.is_set():
                                 break
-                        self.controller.readTempData.clear()
                         results = ljm.eReadAddresses(
                             self.labjackHandle, numFrames, addresses, dataTypes
                         )
                         self.TC_one_Data.append(results[0])
                         self.TC_two_Data.append(results[1])
+                        force = (results[2]-0.5)*333.61
+                        self.forceData.append(force)
                         self.controller.gui.tcOneVariable.set(round(results[0], 2))
                         self.controller.gui.tcTwoVariable.set(round(results[1], 2))
+                        self.controller.gui.displayData.append(force)
+                        self.controller.timeData.append(
+                            round(time.time() - self.controller.startTime, 2)
+                        )
                     except KeyboardInterrupt:
                         break
                     except Exception as ex:

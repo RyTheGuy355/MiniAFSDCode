@@ -428,7 +428,7 @@ class Gui:
         butFrame.grid(column=0, row=0, in_=self.aFrame, pady=5)
         butFrame.grid_propagate(0)
 
-        aForceFrame = tk.Frame(bg="#e3f0fa",)
+        aForceFrame = tk.Frame(bg="#e3f0fa",) ## TODO: doesn't do anything, delete this frame and its components
         aForceFrame.grid(column=0, row=0, in_=butFrame)
 
         forceLabel = tk.Label(
@@ -448,7 +448,6 @@ class Gui:
             textvariable=self.aForceText,
         )
         self.aForceEntry.grid(column=0, row=1, in_=aForceFrame)
-        self.aForceEntry.bind("<KeyRelease-Return>", self.updateForce)
 
         self.dataOutputPane = tk.Canvas(height=200, bg="#ffffff")
         self.dataOutputPane.grid(column=0, row=1, in_=self.aFrame, sticky=tk.E + tk.W)
@@ -681,7 +680,7 @@ class Gui:
         """Toggles data collection events and GUI elements."""
         if "Start" in self.startStopDataBut["text"]:
             if not self.controller.startTime:
-                self.controller.startTime = time.time() + 0.4
+                self.controller.startTime = time.time()
             self.controller.collecting.set()
             self.startStopDataBut.config(text="Stop Data Collection", bg="#ff475d")
 
@@ -922,18 +921,6 @@ class Gui:
             print("There was a position error")
             print(data)
 
-    def updateForce(self, event):
-        """Updates the force display."""
-        if event.widget is self.aForceEntry:
-            try:
-                maxForce = self.aForceText.get()
-                self.aForceText.set(f"{maxForce:.1f}")
-                code = b'G12 L'
-                code += str(maxForce).encode('utf-8')
-                self.sendCode(code, True)
-            except Exception:
-                self.aForceText.set("0.0")
-
     def sendCode(self, code, wait_in_queue):
         """
         Sends code to the mill for controlling movement if the serial port is connected.
@@ -960,15 +947,3 @@ class Gui:
         """
         if self.controller.serial_processor.esp is not None:
             self.controller.serial_processor.zeroCord(axis)
-
-    def goToZero(self, axis):
-        """
-        Goes to the zero point for the given axis.
-
-        Parameters
-        ----------
-        axis : {b'X', b'Y', b'Z', b'A'}
-            The byte designating which axis to move to zero.
-        """
-        if self.controller.serial_processor.esp is not None:
-            self.controller.serial_processor.goToZero(axis)
