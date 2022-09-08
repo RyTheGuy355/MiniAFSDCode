@@ -867,59 +867,14 @@ class Gui:
         confirmRunWin.grab_set()  # prevent interaction with main window until dialog closes
         confirmRunWin.wm_transient(self.controller.root)  # set dialog above main window
 
-    def display(self, aForce, xPos, yPos, aPos, code, data):
+    def display(self, force):
         """
-        Updates the GUI with new force or position data.
+        Updates the GUI with new force data.
 
-        Parameters
-        ----------
-        aForce : bytes
-            The actuator force in 'H' byte format.
-        xPos : bytes
-            The mill's x position in 'i' byte format.
-        yPos : bytes
-            The mill's y position in 'i' byte format.
-        aPos : bytes
-            The actuator position in 'i' byte format.
-        code : bytes
-            _description_
-        data : _type_
-            _description_
         """
-        if code == b'F':
-            try:
-                aForceN = (struct.unpack("H", aForce)[0] - 359) * 0.596  # To N
-                if aForceN < 0:
-                    aForceN = 0
-
-                if self.controller.collecting.is_set():
-                    self.controller.readTempData.set()
-                    self.controller.serial_processor.forceData.append(aForceN)
-                    self.controller.timeData.append(
-                        round(time.time() - self.controller.startTime, 2)
-                    )
-
-                self.displayData.append(190 - aForceN * 0.12)
-                self.dataOutputPane.delete('all')
-                self.dataOutputPane.create_line(tuple(zip(self.times, self.displayData)))
-            except Exception:
-                print("There was a force error")
-                print(data)
-
-        try:
-            xRelPos = struct.unpack("i", xPos)[0] / self.controller.xyPulPerMil
-            yRelPos = struct.unpack("i", yPos)[0] / self.controller.xyPulPerMil
-            aRelPos = struct.unpack("i", aPos)[0] / self.controller.aPulPerMil
-
-            xRelSign = "+" if xRelPos >= 0 else ""
-            self.xRelVar.set(f"{xRelSign}{xRelPos:.3f}")
-            yRelSign = "+" if yRelPos >= 0 else ""
-            self.yRelVar.set(f"{yRelSign}{yRelPos:.3f}")
-            aRelSign = "+" if aRelPos >= 0 else ""
-            self.aRelVar.set(f"{aRelSign}{aRelPos:.3f}")
-        except Exception:
-            print("There was a position error")
-            print(data)
+        self.displayData.append(190 - force * 0.12)
+        self.dataOutputPane.delete('all')
+        self.dataOutputPane.create_line(tuple(zip(self.times, self.displayData)))
 
     def sendCode(self, code, wait_in_queue):
         """

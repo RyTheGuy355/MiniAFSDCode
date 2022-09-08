@@ -2,6 +2,7 @@
 """Class and functions for communicating with a Labjack."""
 
 import threading
+import time
 
 from labjack import ljm
 
@@ -51,24 +52,41 @@ class LabjackHandler:
         while True:
             if self.controller.running.wait(timeout=1):
                 ljm.eWriteAddress(self.labjackHandle, 1000, ljm.constants.FLOAT32, 2.67)
+                #Made from trial and error, sets the AIN pins for the thermocouples to output compensated temperatures in C
+                ljm.eWriteAddresses(
+                    self.labjackHandle, 4, [9002, 9004, 9302, 9304],
+                    [ljm.constants.UINT32,ljm.constants.UINT32, ljm.constants.UINT32, ljm.constants.UINT32],
+                    [22, 22, 1, 1]
+                )
+                avgNum = 0
+                avgResults = [0,0,0]
+                numAvg = 10
                 while self.controller.running.is_set():
                     try:
-                        while not self.controller.readTempData.wait(timeout=0.05):  # TODO what does readTempData mean vs running?
-                            if not self.controller.running.is_set():
-                                break
                         results = ljm.eReadAddresses(
                             self.labjackHandle, numFrames, addresses, dataTypes
                         )
-                        self.TC_one_Data.append(results[0])
-                        self.TC_two_Data.append(results[1])
-                        force = (results[2]-0.5)*333.61
-                        self.forceData.append(force)
-                        self.controller.gui.tcOneVariable.set(round(results[0], 2))
-                        self.controller.gui.tcTwoVariable.set(round(results[1], 2))
-                        self.controller.gui.displayData.append(force)
-                        self.controller.timeData.append(
-                            round(time.time() - self.controller.startTime, 2)
-                        )
+                        avgResults[0] += results[0]
+                        avgResults[1] += results[1]
+                        avgResults[2] += results[2]
+                        avgNum += 1
+                        if (avgNum == numAvg):
+                            avgResults[0] /= numAvg
+                            avgResults[1] /= numAvg
+                            avgResults[2] /= numAvg
+                            force = (avgResults[2]-0.5)*333.61
+                            self.TC_one_Data.append(avgResults[0])
+                            self.TC_two_Data.append(avgResults[1])
+                            self.forceData.append(force)
+                            self.controller.gui.tcOneVariable.set(round(avgResults[0], 2))
+                            self.controller.gui.tcTwoVariable.set(round(avgResults[1], 2))
+                            self.controller.gui.display(force)
+                            self.controller.timeData.append(
+                                round(time.time() - self.controller.startTime, 2)
+                            )
+                            self.controller.gui.display(force)
+                            avgResults = [0,0,0]
+                            avgNum = 0
                     except KeyboardInterrupt:
                         break
                     except Exception as ex:
@@ -79,11 +97,14 @@ class LabjackHandler:
                         while not self.controller.readTempData.wait(timeout=0.01):
                             if not self.controller.running.is_set():
                                 break
+                    time.sleep(0.025)
                 ljm.eWriteAddress(self.labjackHandle, 1000, ljm.constants.FLOAT32, 0)
             else:
                 results = ljm.eReadAddresses(self.labjackHandle, numFrames, addresses, dataTypes)
                 self.controller.gui.tcOneVariable.set(round(results[0], 2))
                 self.controller.gui.tcTwoVariable.set(round(results[1], 2))
+                force =  (results[2]-0.5)*333.61
+                self.controller.gui.display(force)
 
     def clear_data(self):
         """Cleans up all of the collected data."""
