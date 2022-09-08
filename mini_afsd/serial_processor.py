@@ -8,7 +8,27 @@ import serial
 
 
 class SerialProcessor:
-    """An object for controlling communication to the mill through a serial port."""
+    """
+    An object for controlling communication to the mill through a serial port.
+
+    Attributes
+    ----------
+    esp : serial.Serial or None
+        The connected serial port. Is None if not connected to any serial port.
+    port : str or None
+        The string denoting the connected port. Is None if not connected to a serial port.
+    buffer_length : int
+        The buffer length of the connected serial port. Initially starts at 15 (0-indexed) and
+        reduces to 0 if buffer is full.
+    work_offsets : tuple(int, int, int, int)
+        The offsets for the x, y, z, and a axes on the mill, respectively.
+    close_port : threading.Event
+
+    commandInvalid : threading.Event
+
+    serialUnlocked : threading.Event
+
+    """
 
     def __init__(self, controller, port=None, measure_force=True, skip_home=False):
         """
