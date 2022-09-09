@@ -4,10 +4,12 @@
 from collections import deque
 import csv
 from pathlib import Path
-import struct
-import time
 import tkinter as tk
 from tkinter import filedialog
+
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.figure import Figure
+import matplotlib.pyplot as plt
 
 
 class Gui:
@@ -428,32 +430,24 @@ class Gui:
         butFrame.grid(column=0, row=0, in_=self.aFrame, pady=5)
         butFrame.grid_propagate(0)
 
-        aForceFrame = tk.Frame(bg="#e3f0fa",) ## TODO: doesn't do anything, delete this frame and its components
-        aForceFrame.grid(column=0, row=0, in_=butFrame)
+        displayFrame = tk.Frame(bg="#e3f0fa")
+        displayFrame.grid(column=0, row=0, in_=butFrame)
 
-        forceLabel = tk.Label(
-            text="Max Force \n(N)",
-            font=("Times New Roman", 10),
-            width=14,
-            pady=2,
-            padx=4,
-            bg="#EFF",
-            fg="black",
+        self.figure = Figure(figsize=(4, 3), tight_layout=True)
+        self.axis = self.figure.add_subplot()
+        self.line = self.axis.plot(self.times, self.displayData)[0]
+        self.axis.set_xlabel("Time")
+        self.axis.set_ylabel("Force")
+        self.axis.set_xticklabels([])
+
+        self.canvas = FigureCanvasTkAgg(self.figure)
+        self.canvas.get_tk_widget().grid(
+            column=0, row=0, rowspan=2, columnspan=2, in_=displayFrame, sticky=tk.E + tk.W
         )
-        forceLabel.grid(column=0, row=0, in_=aForceFrame)
-
-        self.aForceText = tk.DoubleVar(value="0.0")
-        self.aForceEntry = tk.Entry(
-            width=9, font=("Times New Roman", 18), bg="white", fg="black",
-            textvariable=self.aForceText,
-        )
-        self.aForceEntry.grid(column=0, row=1, in_=aForceFrame)
-
-        self.dataOutputPane = tk.Canvas(height=200, bg="#ffffff")
-        self.dataOutputPane.grid(column=0, row=1, in_=self.aFrame, sticky=tk.E + tk.W)
+        self.canvas.draw_idle()
 
         gCodeFrame = tk.Frame(bg="#e3f0fa")
-        gCodeFrame.grid(column=0, row=2, in_=self.aFrame, pady=30, sticky=tk.E + tk.W)
+        gCodeFrame.grid(column=0, row=2, in_=displayFrame, pady=30, sticky=tk.E + tk.W)
         gCodeFrame.grid_propagate(0)
 
         codeFieldFrame = tk.Frame(bg="#e3f0fa")
@@ -654,72 +648,86 @@ class Gui:
             The window to close when saving is finished. Default is None, which
             will not close any windows.
         """
+        data = self.controller.return_data()
+        if data is None:
+            self.clearAllData(source)
+            return
+
         fileTypes = [('CSV', '*.csv'), ('Text', '*.txt'), ('All Files', '*.*')]
         filename = filedialog.asksaveasfilename(filetypes=fileTypes, defaultextension=fileTypes)
         if not filename:
             return
-
         try:
             with open(filename, 'w', newline='') as f:
                 writer = csv.writer(f)
-                writer.writerows(self.controller.return_data())
+                writer.writerows(data)
         except PermissionError:
             print("File is currently open")
         except Exception:
             print("There was an error saving the file.")
         else:  # only clear data when the save is successful
             self.clearAllData(source)
-            print("Hi")
             self.clearDataBut.configure(fg="grey", command='')
             self.saveDataBut.configure(fg="grey", command='')
 
     def startStopData(self):
         """Toggles data collection events and GUI elements."""
         if "Start" in self.startStopDataBut["text"]:
+            if self.controller.labjack_handler.timeData:
+                # have unsaved data, so cache it and then erase data
+                self.controller.save_temp_file()
+                self.controller.clear_data()
             self.controller.collecting.set()
             self.startStopDataBut.config(text="Stop Data Collection", bg="#ff475d")
 
         else:
             self.controller.collecting.clear()
-            askSaveWin = tk.Toplevel(self.controller.root, takefocus=True)
-            askSaveWin.protocol(
-                "WM_DELETE_WINDOW", lambda: [self.controller.save_temp_file(), askSaveWin.destroy()]
-            )
-            askSaveWin.title("Save Data?")
-            askSaveLabel = tk.Label(
-                askSaveWin,
-                font=("Times New Roman", 22),
-                text="Would you like to save the data?",
-                fg="black",
-                padx=5,
-            )
-            askSaveWin.geometry("%ix120" % askSaveLabel.winfo_reqwidth())
-            askSaveLabel.grid(column=0, row=0, sticky=tk.E + tk.W)
-            askSaveLabel.grid(column=0, row=0)
-            askSaveButFrame = tk.Frame(askSaveWin, width=750, height=80)
-            askSaveButFrame.grid(column=0, row=1, pady=10)
-            tk.Button(
-                askSaveButFrame,
-                font=("Times New Roman", 22),
-                text="YES",
-                fg="black",
-                bg="#8efa8e",
-                command=lambda: self.saveFile(askSaveWin),
-            ).grid(column=0, row=0, padx=30)
-            tk.Button(
-                askSaveButFrame,
-                font=("Times New Roman", 22),
-                text="NO",
-                fg="black",
-                bg="#ff475d",
-                command=lambda: [self.controller.save_temp_file(), askSaveWin.destroy()],
-            ).grid(column=1, row=0, padx=30)
+            if not self.controller.labjack_handler.timeData:
+                self.clearAllData()
+            else:
+                askSaveWin = tk.Toplevel(self.controller.root, takefocus=True)
+                askSaveWin.protocol(
+                    "WM_DELETE_WINDOW", lambda: [
+                        self.controller.save_temp_file(), askSaveWin.destroy()
+                    ]
+                )
+                askSaveWin.title("Save Data?")
+                askSaveLabel = tk.Label(
+                    askSaveWin,
+                    font=("Times New Roman", 22),
+                    text="Would you like to save the data?",
+                    fg="black",
+                    padx=5,
+                )
+                askSaveWin.geometry("%ix120" % askSaveLabel.winfo_reqwidth())
+                askSaveLabel.grid(column=0, row=0, sticky=tk.E + tk.W)
+                askSaveLabel.grid(column=0, row=0)
+                askSaveButFrame = tk.Frame(askSaveWin, width=750, height=80)
+                askSaveButFrame.grid(column=0, row=1, pady=10)
+                tk.Button(
+                    askSaveButFrame,
+                    font=("Times New Roman", 22),
+                    text="YES",
+                    fg="black",
+                    bg="#8efa8e",
+                    command=lambda: self.saveFile(askSaveWin),
+                ).grid(column=0, row=0, padx=30)
+                tk.Button(
+                    askSaveButFrame,
+                    font=("Times New Roman", 22),
+                    text="NO",
+                    fg="black",
+                    bg="#ff475d",
+                    command=lambda: [self.controller.save_temp_file(), askSaveWin.destroy()],
+                ).grid(column=1, row=0, padx=30)
+
+                askSaveWin.grab_set()  # prevent interaction with main window until dialog closes
+                askSaveWin.wm_transient(self.controller.root)  # set dialog above main window
+
+                self.clearDataBut.configure(fg="black", command=self.clearDataPrompt)
+                self.saveDataBut.configure(fg="black", command=self.saveFile)
 
             self.startStopDataBut.configure(text="Start Data Collection", bg="#8efa8e")
-            self.clearDataBut.configure(fg="black", command=self.clearDataPrompt)
-            self.saveDataBut.configure(fg="black", command=self.saveFile)
-            askSaveWin.grab_set()  # prevent interaction with main window until dialog closes
-            askSaveWin.wm_transient(self.controller.root)  # set dialog above main window
 
     def clearAllData(self, source=None):
         """Clears all collected data and resets GUI elements."""
@@ -731,7 +739,7 @@ class Gui:
 
     def clearDataPrompt(self):
         """Asks to save data when closing the window."""
-        if not self.labjack_handler.timeData:
+        if not self.controller.labjack_handler.timeData:
             self.clearAllData()
         else:
             askSaveWin = tk.Toplevel(self.controller.root, takefocus=True)
@@ -867,8 +875,11 @@ class Gui:
 
         """
         self.displayData.append(190 - force * 0.12)
-        self.dataOutputPane.delete('all')
-        self.dataOutputPane.create_line(tuple(zip(self.times, self.displayData)))
+        # self.line.set_ydata(self.displayData)
+        self.line.remove()
+        self.axis.set_prop_cycle(plt.rcParams['axes.prop_cycle'])
+        self.line = self.axis.plot(self.times, self.displayData)[0]
+        self.canvas.draw_idle()
 
     def sendCode(self, code, wait_in_queue):
         """

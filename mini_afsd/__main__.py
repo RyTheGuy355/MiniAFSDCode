@@ -56,6 +56,17 @@ def main():
         '--skip_home', '-SH', action='store_true',
         help='If specified, will send b"$X" to skip having the home the mill before use.'
     )
+    parser.add_argument(
+        '--averaged_points', '-AvP', default=10, type=int,
+        help=('something')
+    )
+    parser.add_argument(
+        '--allow_dummy', '-D', action='store_false',
+        help=(
+            'If specified, will connect to a Labjack stand-in for testing if a real one '
+            'is not connected.'
+        )
+    )
 
     args = parser.parse_args()
     if args.port_regex.startswith('"') or args.port_regex.startswith("'"):
@@ -68,7 +79,8 @@ def main():
         xyStepsPerMil=args.xyStepsPerMil, xyPulPerStep=args.xyPulPerStep,
         aStepsPerMil=args.aStepsPerMil, aPulPerStep=args.aPulPerStep,
         port_regex=args.port_regex, connect_serial=args.connect_serial,
-        labjack_force=args.labjack_force, skip_home=args.skip_home
+        labjack_force=args.labjack_force, skip_home=args.skip_home,
+        averaged_points=args.averaged_points, allow_dummy=args.allow_dummy
     ).run()
 
 

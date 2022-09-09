@@ -43,7 +43,6 @@ from pathlib import Path
 import sys
 from threading import Event
 import tkinter as tk
-import time
 
 import serial
 from serial.tools import list_ports
@@ -124,7 +123,7 @@ class Controller:
 
     def __init__(self, xyStepsPerMil=40, xyPulPerStep=2, aStepsPerMil=1020,
                  aPulPerStep=4, port_regex='(CP21)', connect_serial=True, labjack_force=False,
-                 confirm_run=True, skip_home=False):
+                 confirm_run=True, skip_home=False, averaged_points=10, allow_dummy=False):
         """
         Initializes the object.
 
@@ -165,7 +164,7 @@ class Controller:
         self.cache_folder = get_save_location()
 
         self.serial_processor = SerialProcessor(self, None, not labjack_force, skip_home)
-        self.labjack_handler = LabjackHandler(self, labjack_force)
+        self.labjack_handler = LabjackHandler(self, averaged_points, allow_dummy)
 
         self.root = tk.Tk()
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
@@ -305,20 +304,14 @@ class Controller:
     def return_data(self):
         """Collects the current force and thermocouple data."""
         if self.labjack_handler.labjackHandle is not None:
-            if self.labjack_handler.measure_force:
-                forceData = self.labjack_handler.forceData
-            else:
-                forceData = self.serial_processor.forceData
             combinedData = zip(
                 self.labjack_handler.timeData,
-                forceData,
+                self.labjack_handler.forceData,
                 self.labjack_handler.TC_one_Data,
                 self.labjack_handler.TC_two_Data
             )
-        elif not self.labjack_handler.measure_force:
-            combinedData = zip(self.labjack_handler.timeData, self.serial_processor.forceData)
         else:
-            combinedData = None  # should never be reached, but just in case
+            combinedData = None  # reached if not connected to anything
 
         return combinedData
 
@@ -330,21 +323,22 @@ class Controller:
     def save_temp_file(self):
         """Caches force and thermocouple data when done collecting data to ensure data recovery."""
         combinedData = self.return_data()
-        self._cache_folder.mkdir(exist_ok=True, parents=True)
-        try:
-            output_file = self.cache_folder.joinpath(
-                datetime.now().strftime('%Y-%m-%d %H-%M-%S.csv')
-            )
-            with open(output_file, 'w', newline='') as f:
-                writer = csv.writer(f)
-                writer.writerows(combinedData)
-        except PermissionError:
-            pass  # silently ignore permission error when caching data
-        else:
-            # try to remove all but the newest 10 files
-            # default sort works since file names use ISO8601 date format
-            for old_file in sorted(self.cache_folder.iterdir(), reverse=True)[10:]:
-                try:
-                    old_file.unlink()
-                except Exception:
-                    pass
+        if combinedData is not None:
+            self._cache_folder.mkdir(exist_ok=True, parents=True)
+            try:
+                output_file = self.cache_folder.joinpath(
+                    datetime.now().strftime('%Y-%m-%d %H-%M-%S.csv')
+                )
+                with open(output_file, 'w', newline='') as f:
+                    writer = csv.writer(f)
+                    writer.writerows(combinedData)
+            except PermissionError:
+                pass  # silently ignore permission error when caching data
+            else:
+                # try to remove all but the newest 10 files
+                # default sort works since file names use ISO8601 date format
+                for old_file in sorted(self.cache_folder.iterdir(), reverse=True)[10:]:
+                    try:
+                        old_file.unlink()
+                    except Exception:
+                        pass
