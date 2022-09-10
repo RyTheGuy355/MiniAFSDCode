@@ -30,7 +30,7 @@ class SerialProcessor:
 
     """
 
-    def __init__(self, controller, port=None, measure_force=True, skip_home=False):
+    def __init__(self, controller, port=None, skip_home=False, allow_testing=False):
         """
         Initializes the serial port processor.
 
@@ -50,6 +50,7 @@ class SerialProcessor:
         """
         self.controller = controller
         self.esp = None
+        self.allow_testing = allow_testing
         self.port = port
         self.buffer_length = 15
         self.state = 'Idle'
@@ -95,9 +96,12 @@ class SerialProcessor:
         self._port = port
         if self._port is None:
             self.esp = None
+        elif self._port == 'testing':
+            print('Connecting to dummy serial port')
+            self.esp = DummySerial(port=port, baudrate=115200, timeout=1)
+            self.start_threads()
         else:
             try:
-                # TODO is baudrate fixed or variable?
                 self.esp = serial.Serial(port=self._port, baudrate=115200, timeout=1)
             except serial.SerialException:  # wrong port selected
                 self._port = None
@@ -127,7 +131,7 @@ class SerialProcessor:
                     data = data.strip(b'\r')
                 if not data:
                     continue
-                print(data)
+                # print(data)
 
         print("Stopping serial listener")
         self.esp.flush()
@@ -167,17 +171,18 @@ class SerialProcessor:
         message : bytes
             The state message from the serial port.
         """
-        state = None
         machine_position = None
         work_position = None
         buffer_length = None
         total_message = message.decode().split('|')
+        if len(total_message) < 2:  # accidently received b'ok'
+            return
         # message is sent as
         # b'<state|machine positions: x, y, z, a|BF:buffer size|FS:?,?|Work positions(optional):x,y,z,a>'
         total_message[0] = total_message[0].lstrip('<')
         total_message[-1] = total_message[-1].rstrip('>')
         for entry in total_message:
-            if ':' not in entry:  # machine state
+            if ':' not in entry:
                 self.state = entry
             else:
                 # headers are 'MPos', 'Bf', 'FS', 'WCO', 'Ov', 'Pn'
@@ -288,3 +293,109 @@ class SerialProcessor:
         self.espTypeBuffer.append(wait_in_queue)
         print(f'added to buffer: {code}')
         print(f'internal buffer: {len(self.espBuffer)}')
+
+
+class DummySerial:
+    """A stand-in for testing the expected serial port usage.
+
+    Notes
+    -----
+    Does not have all attributes of a serial.Serial object, only the ones that
+    are currently used within `mini_afsd`.
+    """
+
+    def __init__(self, port='', baudrate=115200, timeout=1, *args, **kwargs):
+        self.state = 'Idle'
+        self.output = b''
+        self.is_open = True
+        self._buffer = 15
+        self.acknowledge = threading.Event()
+        self.inputs = []
+        self.outputs = []
+
+        self._read_thread = threading.Thread(target=self.main_loop, daemon=True)
+        self._read_thread.start()
+
+    def main_loop(self):
+        while True:
+            if self.inputs and not self.acknowledge.is_set():
+                message_bytes = self.inputs.pop(0)
+                try:
+                    message = message_bytes.decode().strip('\n')
+                except UnicodeDecodeError:  # probably b'\x85'
+                    message = 'cancel jog'
+                if not message:
+                    continue
+
+                output = b'ok'
+                wait_time = None
+                # print(message_bytes, message)
+                if message in ('cancel jog', 'reset'):
+                    self.state = 'Idle'
+                elif message.startswith('G'):
+                    if self.state != 'Jog':
+                        self.state = 'Run'
+                        wait_time = 10
+                        self.in_waiting = self.in_waiting - 1
+                    else:
+                        output = b'error:9'
+                elif message.startswith('$'):
+                    if self.state == 'Idle':
+                        if message.startswith('$J'):
+                            self.state = 'Jog'
+                        elif message != '$10=3':  # $10=3 denotes the report state
+                            self.state = 'Other'
+                            wait_time = 1
+                    else:
+                        output = b'error:9'
+                elif message == '?':
+                    output = f'<{self.state}|MPos:420.000,160.000,300.000,100.000|Bf:{self.in_waiting},127|FS:0,0>'.encode()
+                else:
+                    #print('other')
+                    #self.state = b'Other'
+                    wait_time = 1
+
+                self.output = output
+                self.acknowledge.set()
+                if wait_time is not None:
+                    self._run_and_reset(wait_time)
+
+            time.sleep(0.2)
+
+    @property
+    def in_waiting(self):
+        return self._buffer
+
+    @in_waiting.setter
+    def in_waiting(self, value):
+        print(value)
+        self._buffer = min(15, value)
+        if self._buffer < 0:
+            print('overloaded buffer!!!!!!')
+            self.output = b'error:9'
+            self._buffer = 0
+        print(self.in_waiting)
+
+    def write(self, message_bytes):
+        self.inputs.append(message_bytes)
+
+    def _run_and_reset(self, wait_time=10):
+        #time.sleep(wait_time)
+        #self.in_waiting = self.in_waiting + 1
+        #self.state = b'Idle'
+        pass
+
+    def read_until(self, endpoint=b'\n'):
+        output = b'' + endpoint
+        if self.acknowledge.wait(timeout=5):
+            if self.output:
+                output = self.output + endpoint
+                self.output = b''
+            self.acknowledge.clear()
+        return output
+
+    def flush(self):
+        pass
+
+    def close(self):
+        self.is_open = False

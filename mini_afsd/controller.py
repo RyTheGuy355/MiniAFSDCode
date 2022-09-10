@@ -123,7 +123,7 @@ class Controller:
 
     def __init__(self, xyStepsPerMil=40, xyPulPerStep=2, aStepsPerMil=1020,
                  aPulPerStep=4, port_regex='(CP21)', connect_serial=True, labjack_force=False,
-                 confirm_run=True, skip_home=False, averaged_points=10, allow_dummy=False):
+                 confirm_run=True, skip_home=False, averaged_points=10, allow_testing=False):
         """
         Initializes the object.
 
@@ -163,19 +163,19 @@ class Controller:
         self.readTempData = Event()
         self.cache_folder = get_save_location()
 
-        self.serial_processor = SerialProcessor(self, None, not labjack_force, skip_home)
-        self.labjack_handler = LabjackHandler(self, averaged_points, allow_dummy)
-
         self.root = tk.Tk()
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
         self.gui = Gui(self, confirm_run=confirm_run)
+
+        self.serial_processor = SerialProcessor(self, None, skip_home, allow_testing)
+        self.labjack_handler = LabjackHandler(self, averaged_points, allow_testing)
 
         if connect_serial:
             matching_ports = list(list_ports.grep(port_regex))
             if len(matching_ports) == 1:
                 self.update_serial_port(matching_ports[0][0])
             else:  # multiple or no ports found
-                self.serial_selection_dialog()
+                self.serial_selection_dialog(allow_testing)
 
     def run(self):
         """A simple helper for starting the gui's main loop."""
@@ -213,10 +213,13 @@ class Controller:
         except serial.SerialException:
             self.serial_selection_dialog()
 
-    def serial_selection_dialog(self):
+    def serial_selection_dialog(self, allow_testing=False):
         """Launches a popup to select the serial port to use."""
         all_ports = list_ports.comports()
         handles = [' '.join(vals) for vals in all_ports]
+        if allow_testing:
+            handles.append('testing')
+
         if not handles:
             print('No serial ports found, entering test mode')
             self.update_serial_port(None)

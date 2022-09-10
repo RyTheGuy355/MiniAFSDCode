@@ -61,10 +61,10 @@ def main():
         help=('something')
     )
     parser.add_argument(
-        '--allow_dummy', '-D', action='store_false',
+        '--allow_testing', '-D', action='store_false',
         help=(
-            'If specified, will connect to a Labjack stand-in for testing if a real one '
-            'is not connected.'
+            'If specified, will connect to serial and Labjack stand-ins for testing '
+            'if a real ones are not connected.'
         )
     )
 
@@ -80,7 +80,7 @@ def main():
         aStepsPerMil=args.aStepsPerMil, aPulPerStep=args.aPulPerStep,
         port_regex=args.port_regex, connect_serial=args.connect_serial,
         labjack_force=args.labjack_force, skip_home=args.skip_home,
-        averaged_points=args.averaged_points, allow_dummy=args.allow_dummy
+        averaged_points=args.averaged_points, allow_testing=args.allow_testing
     ).run()
 
 

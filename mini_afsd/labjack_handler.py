@@ -11,7 +11,7 @@ from labjack import ljm
 class LabjackHandler:
     """An object for controlling communication to the mill through a serial port."""
 
-    def __init__(self, controller, averaged_points=10, allow_dummy=False):
+    def __init__(self, controller, averaged_points=10, allow_testing=False):
         """
         Initializes the Labjack handler.
 
@@ -33,7 +33,7 @@ class LabjackHandler:
         self.TC_one_Data = []
         self.TC_two_Data = []
 
-        self.start_threads(allow_dummy)
+        self.start_threads(allow_testing)
 
     def start_threads(self, allow_dummy_thread=False):
         """Spawns the thread for communicating with the Labjack."""
@@ -112,7 +112,7 @@ class LabjackHandler:
     def startLabjackDummy(self):
         """The thread for reading data from the LabJack."""
         while True:
-            if self.controller.collecting.wait(timeout=2):
+            if self.controller.collecting.wait(timeout=0.2):
                 self.startTime = time.time()
                 avgNum = 0
                 avgResults = [0, 0, 0]
