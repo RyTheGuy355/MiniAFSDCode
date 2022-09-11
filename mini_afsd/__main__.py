@@ -47,10 +47,6 @@ def main():
             'controlling mill movement.'
         )
     )
-    parser.add_argument(
-        '--labjack_force', '-LF', action='store_false',
-        help='If specified, will not use the LabJack to measure the force during deposition.'
-    )
     # skip home should default be False and only be set to True for testing
     parser.add_argument(
         '--skip_home', '-SH', action='store_true',
@@ -79,8 +75,8 @@ def main():
         xyStepsPerMil=args.xyStepsPerMil, xyPulPerStep=args.xyPulPerStep,
         aStepsPerMil=args.aStepsPerMil, aPulPerStep=args.aPulPerStep,
         port_regex=args.port_regex, connect_serial=args.connect_serial,
-        labjack_force=args.labjack_force, skip_home=args.skip_home,
-        averaged_points=args.averaged_points, allow_testing=args.allow_testing
+        skip_home=args.skip_home, averaged_points=args.averaged_points,
+        allow_testing=args.allow_testing
     ).run()
 
 

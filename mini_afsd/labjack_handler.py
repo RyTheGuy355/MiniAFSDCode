@@ -66,7 +66,8 @@ class LabjackHandler:
             if self.controller.collecting.wait(timeout=1):
                 self.startTime = time.time()
                 ljm.eWriteAddress(self.labjackHandle, 1000, ljm.constants.FLOAT32, 2.67)
-                # Made from trial and error, sets the AIN pins for the thermocouples to output compensated temperatures in C
+                # Made from trial and error, sets the AIN pins for the thermocouples
+                # to output compensated temperatures in C
                 avgNum = 0
                 avgResults = [0, 0, 0]
                 while self.controller.collecting.is_set():
@@ -118,7 +119,11 @@ class LabjackHandler:
                 avgResults = [0, 0, 0]
                 while self.controller.collecting.is_set():
                     try:
-                        results = [random.normalvariate(25, 5), random.normalvariate(25, 0.5), random.normalvariate(1, 0.2)]
+                        results = [
+                            random.normalvariate(25, 5),
+                            random.normalvariate(25, 0.5),
+                            random.normalvariate(1, 0.2)
+                        ]
                         avgResults[0] += results[0]
                         avgResults[1] += results[1]
                         avgResults[2] += results[2]
@@ -149,7 +154,11 @@ class LabjackHandler:
 
                     time.sleep(0.1)
             else:
-                results = [random.normalvariate(25, 5), random.normalvariate(25, 0.5), random.normalvariate(1, 0.2)]
+                results = [
+                    random.normalvariate(25, 5),
+                    random.normalvariate(25, 0.5),
+                    random.normalvariate(1, 0.2)
+                ]
                 self.controller.gui.tcOneVariable.set(round(results[0], 2))
                 self.controller.gui.tcTwoVariable.set(round(results[1], 2))
                 force = (results[2] - 0.5) * 333.61

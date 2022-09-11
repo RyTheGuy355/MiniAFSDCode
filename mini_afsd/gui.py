@@ -91,7 +91,7 @@ class Gui:
     def createTraverseFrame(self):
         """Creates the traversal section of the GUI."""
         tFrame = tk.LabelFrame(
-            width=530,
+            width=550,
             height=600,
             bg="#e3f0fa",
             labelwidget=tk.Label(font=("Times New Roman", 22), text="TRAVERSE", fg="black"),
@@ -264,7 +264,7 @@ class Gui:
             bg="#EEE",
             relief="groove",
             bd=1,
-            pady=6,
+            pady=4,
         )
         stateLabel.grid(column=1, row=5, in_=posFrame)
 
@@ -277,7 +277,7 @@ class Gui:
             bg="#EEE",
             relief="groove",
             bd=1,
-            pady=6,
+            pady=4,
         )
         bufferLabel.grid(column=1, row=6, in_=posFrame)
 
@@ -414,7 +414,7 @@ class Gui:
     def createActuatorFrame(self):
         """Creates the actuator control section of the GUI."""
         self.aFrame = tk.LabelFrame(
-            width=470,
+            width=450,
             height=600,
             bg="#e3f0fa",
             labelwidget=tk.Label(font=("Times New Roman", 22), text="SPINDLE", fg="black"),
@@ -433,7 +433,7 @@ class Gui:
         displayFrame = tk.Frame(bg="#e3f0fa")
         displayFrame.grid(column=0, row=0, in_=butFrame)
 
-        self.figure = Figure(figsize=(4, 3), tight_layout=True)
+        self.figure = Figure(figsize=(3.8, 3), tight_layout=True)
         self.axis = self.figure.add_subplot()
         self.line = self.axis.plot(self.times, self.displayData)[0]
         self.axis.set_xlabel("Time")
@@ -479,7 +479,7 @@ class Gui:
         gCodeFileLabel = tk.Label(
             text="Enter GCode Filepath:",
             font=("Times New Roman", 14),
-            width=28,
+            width=22,
             pady=2,
             padx=4,
             bg="#EFF",
@@ -490,7 +490,7 @@ class Gui:
 
         self.gCodeFileText = tk.StringVar()
         gCodeFileEntry = tk.Entry(
-            width=32,
+            width=24,
             font=("Times New Roman", 14),
             bg="white",
             fg="black",

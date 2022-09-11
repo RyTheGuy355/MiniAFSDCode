@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
-"""Class and functions for communicating with serial ports and a Labjack."""
+"""Class and functions for communicating with serial ports."""
 
+import random
 import threading
 import time
 
@@ -40,8 +41,6 @@ class SerialProcessor:
             _description_
         port : _type_, optional
             _description_, by default None
-        measure_force : bool, optional
-            _description_, by default True
         skip_home : bool, optional
             If True, the serial port will send b'$X' to skip homing and directly
             be ready to send commands. If False (default), b'$X' or b'$H' (home)
@@ -59,6 +58,7 @@ class SerialProcessor:
         self.commandInvalid = threading.Event()
         self.serialUnlocked = threading.Event()
         self.serialUnlocked.set()
+        self.state_exact = threading.Event()
 
         self.forceData = []
         self.espBuffer = []
@@ -123,15 +123,15 @@ class SerialProcessor:
     def serialListen(self):
         """The event loop for the thread that reads messages from the serial port."""
         print("Starting serial listener")
-        while not self.close_port.is_set():  # TODO put a try-except in for potential errors
-            if self.esp.in_waiting and self.serialUnlocked.is_set():
+        while not self.close_port.is_set():
+            if self.esp.in_waiting and self.serialUnlocked.wait():
                 data = self.esp.read_until(b'\n')
                 data.strip(b'\n')
                 if (b'\r' in data):
                     data = data.strip(b'\r')
                 if not data:
                     continue
-                # print(data)
+                print(data)
 
         print("Stopping serial listener")
         self.esp.flush()
@@ -149,15 +149,75 @@ class SerialProcessor:
                 for i, (bufferValue, wait_in_queue) in enumerate(
                     zip(self.espBuffer, self.espTypeBuffer)
                 ):
-                    # TODO should still check self.controller.running.is_set()?
-                    if (not wait_in_queue and self.buffer_length > 1) or self.buffer_length > 8:
-                        self.esp.write(bufferValue)
-                        self.esp.write(b'\n')
-                        self.espBuffer.pop(i)
-                        self.espTypeBuffer.pop(i)
-                        self.buffer_length += 1
+                    if not self.controller.running.is_set():
                         break
+
+                    if (
+                        (not wait_in_queue and self.buffer_length > 1)
+                        or (self.buffer_length > 8 and not self.commandInvalid.is_set())
+                    ):
+                        self.serialUnlocked.wait()
+                        self.serialUnlocked.clear()
+                        break_loop = False
+                        if self.valid_message(bufferValue):
+                            self.commandInvalid.clear()
+                            self.esp.write(bufferValue)
+                            self.esp.write(b'\n')
+                            self.espBuffer.pop(i)
+                            self.espTypeBuffer.pop(i)
+                            self.buffer_length += 1
+                            break_loop = True
+                        else:
+                            self.commandInvalid.set()
+                        self.serialUnlocked.set()
+                        if break_loop:
+                            break
+
+                # reset so commands can be tried again in case state has changed
+                self.commandInvalid.clear()
             time.sleep(0.01)
+
+    def valid_message(self, message):
+        """
+        Ensures the next message to the serial port is valid with the current state.
+
+        Parameters
+        ----------
+        message : bytes
+            The message to be sent to the serial port.
+
+        Returns
+        -------
+        valid_command : bool
+            Whether the message is valid with the current state of the serial
+            port and can be sent.
+        """
+        valid_command = True
+        new_state = ''
+
+        try:
+            message = message.decode()
+        except UnicodeDecodeError:
+            if message == b'\x85':
+                self.state = 'Idle'
+        else:
+            if message:
+                if message[0] in ('G', 'M', 'S'):
+                    if self.state != 'Jog':
+                        new_state = 'Run'
+                    else:
+                        valid_command = False
+                elif message.startswith('$'):
+                    if self.state == 'Idle':
+                        if message.startswith('$J'):
+                            new_state = 'Jog'
+                    elif not message.startswith('$H'):
+                        valid_command = False
+
+        if new_state:
+            self.state = new_state
+
+        return valid_command
 
     def parse_state_message(self, message):
         """
@@ -238,6 +298,7 @@ class SerialProcessor:
             self.buffer_length = buffer_length
 
         self.controller.gui.stateVar.set(self.state)
+        self.state_exact.set()
 
     def status_update(self):
         """Sends and receives querries to the port to receive the position and state of the mill."""
@@ -305,18 +366,21 @@ class DummySerial:
     """
 
     def __init__(self, port='', baudrate=115200, timeout=1, *args, **kwargs):
-        self.state = 'Idle'
+        self.state = 'Alarm'
         self.output = b''
         self.is_open = True
         self._buffer = 15
         self.acknowledge = threading.Event()
         self.inputs = []
         self.outputs = []
+        self.machine_position = (0, 0, 0, 0)
+        self.offsets = (0, 0, 0, 0)
 
         self._read_thread = threading.Thread(target=self.main_loop, daemon=True)
         self._read_thread.start()
 
     def main_loop(self):
+        """The main loop of the serial emulator in which it does its logic."""
         while True:
             if self.inputs and not self.acknowledge.is_set():
                 message_bytes = self.inputs.pop(0)
@@ -328,14 +392,21 @@ class DummySerial:
                     continue
 
                 output = b'ok'
-                wait_time = None
-                # print(message_bytes, message)
+                if message != '?':
+                    print(f'Serial emulator received: {message_bytes}')
+
+                if self.state == 'Alarm':
+                    if not (message.startswith('$H') or message in ('X', '?')):
+                        continue
+                    elif message != '?':
+                        self.state = 'Idle'
+
                 if message in ('cancel jog', 'reset'):
                     self.state = 'Idle'
-                elif message.startswith('G'):
+                    self.in_waiting = 15
+                elif message[0] in ('G', 'M', 'S'):
                     if self.state != 'Jog':
                         self.state = 'Run'
-                        wait_time = 10
                         self.in_waiting = self.in_waiting - 1
                     else:
                         output = b'error:9'
@@ -345,57 +416,88 @@ class DummySerial:
                             self.state = 'Jog'
                         elif message != '$10=3':  # $10=3 denotes the report state
                             self.state = 'Other'
-                            wait_time = 1
                     else:
                         output = b'error:9'
                 elif message == '?':
-                    output = f'<{self.state}|MPos:420.000,160.000,300.000,100.000|Bf:{self.in_waiting},127|FS:0,0>'.encode()
-                else:
-                    #print('other')
-                    #self.state = b'Other'
-                    wait_time = 1
+                    if self.state not in ('Idle', 'Alarm'):
+                        self.machine_position = (
+                            random.uniform(0, 300), random.uniform(0, 300),
+                            random.uniform(0, 300), random.uniform(0, 100)
+                        )
+                        self.offsets = (
+                            random.uniform(0, 3),
+                            random.uniform(0, 3),
+                            random.uniform(0, 3),
+                            random.uniform(0, 3)
+                        )
+                    output = f'<{self.state}|MPos:{self.machine_position[0]:.3f},{self.machine_position[1]:.3f},{self.machine_position[2]:.3f},{self.machine_position[3]:.3f}|Bf:{self.in_waiting},127|FS:0,0>'
+                    if random.choice([0, 0, 0, 1]):
+                        output = output[:-1] + f'|WCO:{self.offsets[0]:.3f},{self.offsets[1]:.3f},{self.offsets[2]:.3f},{self.offsets[3]:.3f}'
+                    output = output.encode()
 
                 self.output = output
                 self.acknowledge.set()
-                if wait_time is not None:
-                    self._run_and_reset(wait_time)
 
             time.sleep(0.2)
 
     @property
     def in_waiting(self):
+        """The number of values in the internal buffer of the serial port."""
         return self._buffer
 
     @in_waiting.setter
     def in_waiting(self, value):
-        print(value)
+        """
+        Sets the new internal buffer and ensures it is between 0 and 15.
+
+        Parameters
+        ----------
+        value : int
+            The new internal buffer value.
+        """
         self._buffer = min(15, value)
         if self._buffer < 0:
             print('overloaded buffer!!!!!!')
             self.output = b'error:9'
             self._buffer = 0
-        print(self.in_waiting)
 
     def write(self, message_bytes):
+        """
+        Adds the input message to the serial port's input queue.
+
+        Parameters
+        ----------
+        message_bytes : bytes
+            The input message.
+        """
         self.inputs.append(message_bytes)
 
-    def _run_and_reset(self, wait_time=10):
-        #time.sleep(wait_time)
-        #self.in_waiting = self.in_waiting + 1
-        #self.state = b'Idle'
-        pass
-
     def read_until(self, endpoint=b'\n'):
-        output = b'' + endpoint
+        r"""
+        Returns the current output of the serial port.
+
+        Parameters
+        ----------
+        endpoint : bytes, optional
+            The expected endpoint, which is automatically added to
+            the end of the output. Default is b'\n'.
+
+        Returns
+        -------
+        output : bytes
+            The output message.
+        """
+        output = b''
         if self.acknowledge.wait(timeout=5):
             if self.output:
-                output = self.output + endpoint
+                output = self.output
                 self.output = b''
             self.acknowledge.clear()
         return output
 
     def flush(self):
-        pass
+        """Dummy method."""
 
     def close(self):
+        """Closes the port."""
         self.is_open = False
