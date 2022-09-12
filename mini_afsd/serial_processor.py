@@ -124,14 +124,24 @@ class SerialProcessor:
         """The event loop for the thread that reads messages from the serial port."""
         print("Starting serial listener")
         while not self.close_port.is_set():
-            if self.esp.in_waiting and self.serialUnlocked.wait():
-                data = self.esp.read_until(b'\n')
-                data.strip(b'\n')
-                if (b'\r' in data):
-                    data = data.strip(b'\r')
-                if not data:
-                    continue
-                print(data)
+            if self.serialUnlocked.wait() and self.esp.in_waiting:
+                self.serialUnlocked.clear()
+                try:
+                    data = self.esp.read_until(b'\n')
+                    data.strip(b'\n')
+                    if (b'\r' in data):
+                        data = data.strip(b'\r')
+
+                    if b'|' in data:
+                        self.parse_state_message(data)
+                    elif not data:
+                        continue
+                    else:
+                        print(data)
+                finally:
+                    pass
+                    self.serialUnlocked.set()
+            time.sleep(0.2)
 
         print("Stopping serial listener")
         self.esp.flush()
@@ -211,7 +221,7 @@ class SerialProcessor:
                     if self.state == 'Idle':
                         if message.startswith('$J'):
                             new_state = 'Jog'
-                    elif not message.startswith('$H'):
+                    elif not message.startswith('$H'):  # TODO should b'$10=3' also get an exception?
                         valid_command = False
 
         if new_state:
@@ -369,6 +379,7 @@ class DummySerial:
         self.state = 'Alarm'
         self.output = b''
         self.is_open = True
+        self.loops = 0
         self._buffer = 15
         self.acknowledge = threading.Event()
         self.inputs = []
@@ -403,11 +414,11 @@ class DummySerial:
 
                 if message in ('cancel jog', 'reset'):
                     self.state = 'Idle'
-                    self.in_waiting = 15
+                    self.buffer = 15
                 elif message[0] in ('G', 'M', 'S'):
                     if self.state != 'Jog':
                         self.state = 'Run'
-                        self.in_waiting = self.in_waiting - 1
+                        self.buffer = self.buffer - 1
                     else:
                         output = b'error:9'
                 elif message.startswith('$'):
@@ -430,23 +441,29 @@ class DummySerial:
                             random.uniform(0, 3),
                             random.uniform(0, 3)
                         )
-                    output = f'<{self.state}|MPos:{self.machine_position[0]:.3f},{self.machine_position[1]:.3f},{self.machine_position[2]:.3f},{self.machine_position[3]:.3f}|Bf:{self.in_waiting},127|FS:0,0>'
+                    output = f'<{self.state}|MPos:{self.machine_position[0]:.3f},{self.machine_position[1]:.3f},{self.machine_position[2]:.3f},{self.machine_position[3]:.3f}|Bf:{self.buffer},127|FS:0,0>'
                     if random.choice([0, 0, 0, 1]):
                         output = output[:-1] + f'|WCO:{self.offsets[0]:.3f},{self.offsets[1]:.3f},{self.offsets[2]:.3f},{self.offsets[3]:.3f}'
                     output = output.encode()
 
                 self.output = output
+                if self.state not in ('Idle', 'Jog', 'Alarm'):
+                    self.loops += 1
+                    if self.loops > 20:
+                        self.state = 'Idle'
+                        self.loops = 0
+                        self.buffer = 15
                 self.acknowledge.set()
 
             time.sleep(0.2)
 
     @property
-    def in_waiting(self):
+    def buffer(self):
         """The number of values in the internal buffer of the serial port."""
         return self._buffer
 
-    @in_waiting.setter
-    def in_waiting(self, value):
+    @buffer.setter
+    def buffer(self, value):
         """
         Sets the new internal buffer and ensures it is between 0 and 15.
 
@@ -471,6 +488,20 @@ class DummySerial:
             The input message.
         """
         self.inputs.append(message_bytes)
+
+    @property
+    def in_waiting(self):
+        """
+        The number of bytes waiting to be read from the serial port.
+
+        Just a dummy function, so any integer could be returned for
+        the desired effect.
+        """
+        if self.output:
+            output = 10
+        else:
+            output = 0
+        return output
 
     def read_until(self, endpoint=b'\n'):
         r"""
