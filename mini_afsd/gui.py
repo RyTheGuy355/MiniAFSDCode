@@ -802,18 +802,24 @@ class Gui:
         if not filename:
             return  # ignore if no file is selected
 
+        if not self.controller.collecting.is_set():
+            if self.confirm_run:
+                self.confirm_run_with_data(filename)
+            elif self.confirm_run is None:
+                self.startStopData()
+                self.write_file_to_buffer(filename)
+            else:
+                self.write_file_to_buffer(filename)
+        else:
+            self.write_file_to_buffer(filename)
+
+    def write_file_to_buffer(self, filename):
         with open(filename, 'r') as f:
             self.controller.serial_processor.espBuffer = [line.rstrip('\n').encode() for line in f]
         self.controller.serial_processor.espTypeBuffer = (
             [1] * len(self.controller.serial_processor.espBuffer)
         )
         print(self.controller.serial_processor.espTypeBuffer)
-
-        if not self.controller.collecting.is_set():
-            if self.confirm_run:
-                self.confirm_run_with_data()
-            elif self.confirm_run is None:
-                self.startStopData()
 
     def set_cofirm_run(self, set_run, confirm_run):
         if set_run and confirm_run:
@@ -824,7 +830,7 @@ class Gui:
         elif confirm_run:
             self.confirm_run = False
 
-    def confirm_run_with_data(self):
+    def confirm_run_with_data(self, filename):
         confirmRunWin = tk.Toplevel(self.controller.root, takefocus=True)
         confirmRunWin.title("Running without saving")
         askSaveLabel = tk.Label(
@@ -853,7 +859,8 @@ class Gui:
             fg="black",
             bg="#8efa8e",
             command=lambda: [
-                self.set_cofirm_run(True, checkbox_var.get()), confirmRunWin.destroy()
+                self.set_cofirm_run(True, checkbox_var.get()), confirmRunWin.destroy(),
+                self.write_file_to_buffer(filename)
             ],
         ).grid(column=0, row=1, padx=30)
         tk.Button(
@@ -863,7 +870,8 @@ class Gui:
             fg="black",
             bg="#ff475d",
             command=lambda: [
-                self.set_cofirm_run(False, checkbox_var.get()), confirmRunWin.destroy()
+                self.set_cofirm_run(False, checkbox_var.get()), confirmRunWin.destroy(),
+                self.write_file_to_buffer(filename)
             ],
         ).grid(column=1, row=1, padx=30)
         confirmRunWin.grab_set()  # prevent interaction with main window until dialog closes
