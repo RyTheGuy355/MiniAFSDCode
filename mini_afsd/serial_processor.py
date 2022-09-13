@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Class and functions for communicating with serial ports."""
 
+from collections import deque
 import random
 import threading
 import time
@@ -56,8 +57,10 @@ class SerialProcessor:
         self.work_offsets = (0, 0, 0, 0)
         self.close_port = threading.Event()
         self.commandInvalid = threading.Event()
-        self.serialUnlocked = threading.Event()
-        self.serialUnlocked.set()
+        self.serialReadUnlocked = threading.Event()
+        self.serialReadUnlocked.set()
+        self.serialWriteUnlocked = threading.Event()
+        self.serialWriteUnlocked.set()
         self.state_exact = threading.Event()
 
         self.forceData = []
@@ -124,24 +127,24 @@ class SerialProcessor:
         """The event loop for the thread that reads messages from the serial port."""
         print("Starting serial listener")
         while not self.close_port.is_set():
-            if self.serialUnlocked.wait() and self.esp.in_waiting:
-                self.serialUnlocked.clear()
+            if self.serialReadUnlocked.wait(timeout=0.5) and self.esp.in_waiting:
+                self.serialReadUnlocked.clear()
                 try:
                     data = self.esp.read_until(b'\n')
                     data.strip(b'\n')
                     if (b'\r' in data):
                         data = data.strip(b'\r')
 
-                    if b'|' in data:
-                        self.parse_state_message(data)
-                    elif not data:
+                    #if b'|' in data:
+                    #    self.parse_state_message(data)
+                    if not data:
                         continue
                     else:
                         print(data)
-                finally:
+                except Exception:
                     pass
-                    self.serialUnlocked.set()
-            time.sleep(0.2)
+                self.serialReadUnlocked.set()
+            time.sleep(0.01)
 
         print("Stopping serial listener")
         self.esp.flush()
@@ -159,17 +162,19 @@ class SerialProcessor:
                 for i, (bufferValue, wait_in_queue) in enumerate(
                     zip(self.espBuffer, self.espTypeBuffer)
                 ):
-                    if not self.controller.running.is_set():
+                    if not self.controller.running.is_set() and b'\x85' not in self.espBuffer:
                         break
 
                     if (
                         (not wait_in_queue and self.buffer_length > 1)
                         or (self.buffer_length > 8 and not self.commandInvalid.is_set())
                     ):
-                        self.serialUnlocked.wait()
-                        self.serialUnlocked.clear()
+                        self.serialWriteUnlocked.wait()
+                        self.serialWriteUnlocked.clear()
                         break_loop = False
-                        if self.valid_message(bufferValue):
+                        if not self.valid_message(bufferValue):
+                            self.commandInvalid.set()
+                        else:
                             self.commandInvalid.clear()
                             self.esp.write(bufferValue)
                             self.esp.write(b'\n')
@@ -177,9 +182,8 @@ class SerialProcessor:
                             self.espTypeBuffer.pop(i)
                             self.buffer_length += 1
                             break_loop = True
-                        else:
-                            self.commandInvalid.set()
-                        self.serialUnlocked.set()
+
+                        self.serialWriteUnlocked.set()
                         if break_loop:
                             break
 
@@ -315,12 +319,18 @@ class SerialProcessor:
         while not self.close_port.wait(timeout=0.5):
             if not self.controller.running.wait(timeout=0.5):
                 continue
-            self.serialUnlocked.wait()
-            self.serialUnlocked.clear()
-            self.esp.write(b'?')
-            message = self.esp.read_until(b'\n').strip(b'\r\n')
-            self.parse_state_message(message)
-            self.serialUnlocked.set()
+            self.serialWriteUnlocked.wait()
+            self.serialWriteUnlocked.clear()
+            self.serialReadUnlocked.wait()
+            self.serialReadUnlocked.clear()
+            try:
+                self.esp.write(b'?')
+                message = self.esp.read_until(b'\n').strip(b'\r\n')
+                self.parse_state_message(message)
+            except Exception:  # need to ensure all locks are reset so ignore errors
+                pass
+            self.serialReadUnlocked.set()
+            self.serialWriteUnlocked.set()
 
     def clear_data(self):
         """Cleans up all of the collected data."""
@@ -377,13 +387,12 @@ class DummySerial:
 
     def __init__(self, port='', baudrate=115200, timeout=1, *args, **kwargs):
         self.state = 'Alarm'
-        self.output = b''
         self.is_open = True
         self.loops = 0
         self._buffer = 15
         self.acknowledge = threading.Event()
-        self.inputs = []
-        self.outputs = []
+        self.inputs = deque()
+        self.outputs = deque()
         self.machine_position = (0, 0, 0, 0)
         self.offsets = (0, 0, 0, 0)
 
@@ -394,7 +403,7 @@ class DummySerial:
         """The main loop of the serial emulator in which it does its logic."""
         while True:
             if self.inputs and not self.acknowledge.is_set():
-                message_bytes = self.inputs.pop(0)
+                message_bytes = self.inputs.popleft()
                 try:
                     message = message_bytes.decode().strip('\n')
                 except UnicodeDecodeError:  # probably b'\x85'
@@ -446,7 +455,7 @@ class DummySerial:
                         output = output[:-1] + f'|WCO:{self.offsets[0]:.3f},{self.offsets[1]:.3f},{self.offsets[2]:.3f},{self.offsets[3]:.3f}'
                     output = output.encode()
 
-                self.output = output
+                self.outputs.append(output)
                 if self.state not in ('Idle', 'Jog', 'Alarm'):
                     self.loops += 1
                     if self.loops > 20:
@@ -475,7 +484,7 @@ class DummySerial:
         self._buffer = min(15, value)
         if self._buffer < 0:
             print('overloaded buffer!!!!!!')
-            self.output = b'error:9'
+            self.outputs.append(b'error:9')
             self._buffer = 0
 
     def write(self, message_bytes):
@@ -497,7 +506,7 @@ class DummySerial:
         Just a dummy function, so any integer could be returned for
         the desired effect.
         """
-        if self.output:
+        if self.outputs:
             output = 10
         else:
             output = 0
@@ -520,9 +529,8 @@ class DummySerial:
         """
         output = b''
         if self.acknowledge.wait(timeout=5):
-            if self.output:
-                output = self.output
-                self.output = b''
+            if self.outputs:
+                output = self.outputs.popleft()
             self.acknowledge.clear()
         return output
 

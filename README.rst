@@ -22,10 +22,6 @@ To be added.
 Installation
 ------------
 
-TODO: Figure out how to install from private repository for releases and main branch.
-
-Probably want to introduce how to install python using python's website, winpython, or anaconda.
-
 
 Dependencies
 ~~~~~~~~~~~~
@@ -33,8 +29,9 @@ Dependencies
 mini_afsd requires `Python <https://python.org>`_ version 3.7 or later
 and the following Python libraries:
 
-* `pyserial <https://pypi.org/project/pyserial/>`_
 * `labjack-ljm <https://pypi.org/project/labjack-ljm/>`_
+* `matplotlib <https://pypi.org/project/matplotlib/>`_ (>=3.4)
+* `pyserial <https://pypi.org/project/pyserial/>`_
 
 
 All of the required Python libraries should be automatically installed when
@@ -83,10 +80,39 @@ To install the current version of mini_afsd from GitHub, run:
 .. _GitHub repo: https://github.com/RyTheGuy355/MiniAFSDCode
 
 
+Optional Dependencies
+~~~~~~~~~~~~~~~~~~~~~
+
+While not needed, an Arduino IDE (available from https://www.arduino.cc/en/software)
+can be used when connected to the serial port of the mill to get more detailed feedback
+on the messages sent to and from the port.
+
+
 Quick Start
 -----------
 
-To be added.
+For default usage, mini_afsd can be ran from the a terminal (the command line if
+Python was install universally, from an Anaconda terminal if Python was installed with
+Anaconda, or from the WinPython Command Prompt if Python was installed using WinPython) using:
+
+.. code-block:: console
+
+  python -m mini_afsd
+
+To list out the various options when using mini_afsd from the terminal, simply do:
+
+.. code-block:: console
+
+  python -m mini_afsd -h
+
+
+Alternatively, mini_afsd can be used from a Python file by doing the following:
+
+.. code-block:: python
+
+    from mini_afsd import Controller
+
+    Controller().run()
 
 
 Contributing
