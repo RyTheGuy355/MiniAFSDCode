@@ -213,7 +213,8 @@ class SerialProcessor:
             message = message.decode()
         except UnicodeDecodeError:
             if message == b'\x85':
-                self.state = 'Idle'
+                #self.state = 'Idle'
+                pass  # let mill confirm that it went to idle
         else:
             if message:
                 if message[0] in ('G', 'M', 'S'):
