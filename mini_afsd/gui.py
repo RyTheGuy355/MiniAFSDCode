@@ -634,7 +634,6 @@ class Gui:
             self.controller.serial_processor.espBuffer.clear()
             self.controller.serial_processor.espTypeBuffer.clear()
             self.sendCode(b'!', False)
-            self.sendCode(b'$MD', False)
             self.sBut.config(text="Start Mill", bg="#8efa8e")
             self.enXYBut.config(text="Enable XYA", bg="#8efa8e")
             self.controller.running.clear()
