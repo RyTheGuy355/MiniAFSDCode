@@ -222,11 +222,10 @@ class SerialProcessor:
                         new_state = 'Run'
                     else:
                         valid_command = False
-                elif message.startswith('$'):
+                elif message.startswith('$J'):
                     if self.state == 'Idle':
-                        if message.startswith('$J'):
-                            new_state = 'Jog'
-                    elif not message.startswith('$H'):  # TODO should b'$10=3' also get an exception?
+                        new_state = 'Jog'
+                    else:
                         valid_command = False
 
         if new_state:
