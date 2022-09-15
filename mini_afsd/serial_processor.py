@@ -51,6 +51,8 @@ class SerialProcessor:
         self.controller = controller
         self.esp = None
         self.allow_testing = allow_testing
+        # commands that can be sent even if mill is off
+        self.mill_off_commands = {b'\x85', b'!', b'~', b'$MD'}
         self.port = port
         self.buffer_length = 15
         self.state = 'Idle'
@@ -162,7 +164,10 @@ class SerialProcessor:
                 for i, (bufferValue, wait_in_queue) in enumerate(
                     zip(self.espBuffer, self.espTypeBuffer)
                 ):
-                    if not self.controller.running.is_set() and b'\x85' not in self.espBuffer:
+                    if (
+                        not self.controller.running.is_set()
+                        and not any(val in self.espBuffer for val in self.mill_off_commands)
+                    ):
                         break
 
                     if (
