@@ -66,7 +66,7 @@ class Gui:
         """
         self.controller = controller
         self.times = tuple(t * 3 for t in range(display_size))
-        self.displayData = deque([190] * display_size, maxlen=display_size)
+        self.displayData = deque([0] * display_size, maxlen=display_size)
         self.gcode_directory = '/'
         self.confirm_run = confirm_run
 
@@ -882,7 +882,7 @@ class Gui:
         Updates the GUI with new force data.
 
         """
-        self.displayData.append(190 - force * 0.12)
+        self.displayData.append(force)
         # self.line.set_ydata(self.displayData)
         self.line.remove()
         self.axis.set_prop_cycle(plt.rcParams['axes.prop_cycle'])
