@@ -260,6 +260,7 @@ class SerialProcessor:
         # b'<state|machine positions: x, y, z, a|BF:buffer size|FS:?,?|Work positions(optional):x,y,z,a>'
         total_message[0] = total_message[0].lstrip('<')
         total_message[-1] = total_message[-1].rstrip('>')
+        old_state = self.state
         for entry in total_message:
             if ':' not in entry:
                 self.state = entry
@@ -315,6 +316,12 @@ class SerialProcessor:
         if buffer_length is not None:
             self.controller.gui.bufferVar.set(buffer_length)
             self.buffer_length = buffer_length
+
+        if old_state != self.state:
+            if old_state == 'Alarm':
+                self.controller.gui.resetBut.configure(fg="grey", state='disabled')
+            elif self.state == 'Alarm':
+                self.controller.gui.resetBut.configure(fg='black', state='normal')
 
         self.controller.gui.stateVar.set(self.state)
         self.state_exact.set()
@@ -421,7 +428,7 @@ class DummySerial:
                     print(f'Serial emulator received: {message_bytes}')
 
                 if self.state == 'Alarm':
-                    if not (message.startswith('$H') or message in ('X', '?')):
+                    if not (message.startswith('$H') or message in ('$X', '?')):
                         continue
                     elif message != '?':
                         self.state = 'Idle'
@@ -459,6 +466,9 @@ class DummySerial:
                     if random.choice([0, 0, 0, 1]):
                         output = output[:-1] + f'|WCO:{self.offsets[0]:.3f},{self.offsets[1]:.3f},{self.offsets[2]:.3f},{self.offsets[3]:.3f}'
                     output = output.encode()
+                elif message.lower() == 'alarm':
+                    self.state = 'Alarm'
+                    output = b'Setting into alarm state'
 
                 self.outputs.append(output)
                 if self.state not in ('Idle', 'Jog', 'Alarm'):
