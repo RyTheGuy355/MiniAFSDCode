@@ -83,7 +83,8 @@ class LabjackHandler:
                             avgResults[0] /= self.numDataAvg
                             avgResults[1] /= self.numDataAvg
                             avgResults[2] /= self.numDataAvg
-                            force = (avgResults[2] - 0.5) * 333.61
+                            force = (avgResults[2] - 0.5) * 333.61  #Converts the load cell range of 0.5-4.5 V and 0 to 50 lbs to the calibrated force in N
+                                                                    #333.61 is 6 (lever arm) x 12.5 (50 lbs range / 4 V range) x 4.45 (lbs to N)
                             self.TC_one_Data.append(avgResults[0])
                             self.TC_two_Data.append(avgResults[1])
                             self.forceData.append(force)
