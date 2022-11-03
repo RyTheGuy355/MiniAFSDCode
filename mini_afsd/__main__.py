@@ -57,7 +57,7 @@ def main():
         help=('something')
     )
     parser.add_argument(
-        '--allow_testing', '-D', action='store_false',
+        '--allow_testing', '-D', action='store_true',
         help=(
             'If specified, will connect to serial and Labjack stand-ins for testing '
             'if a real ones are not connected.'
