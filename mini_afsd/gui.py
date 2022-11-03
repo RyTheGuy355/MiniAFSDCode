@@ -411,6 +411,20 @@ class Gui:
         )
         self.cancelJogBut.grid(column=2, row=4, in_=zeroFrame)
 
+        self.resetBut = tk.Button(
+            text="Reset &\nUnlock",
+            font=("Times New Roman bold", 12),
+            bg="#8efa8e",
+            fg="grey",
+            command=lambda: [
+                self.sendCode(b'\x18', False),
+                self.sendCode(b'$X', False),
+                self.sendCode(b'$MD', False)
+            ],
+            state='disabled'
+        )
+        self.resetBut.grid(column=2, row=5, pady=4, in_=zeroFrame)
+
     def createActuatorFrame(self):
         """Creates the actuator control section of the GUI."""
         self.aFrame = tk.LabelFrame(
