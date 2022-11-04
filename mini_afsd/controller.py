@@ -38,6 +38,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import csv
 from datetime import datetime
+import itertools
+import logging
 import os
 from pathlib import Path
 import sys
@@ -159,6 +161,23 @@ class Controller:
         self.collecting = Event()
         self.readTempData = Event()
         self.cache_folder = get_save_location()
+        self.log_folder = self.cache_folder.joinpath('Logs')
+        self.log_folder.mkdir(exist_ok=True)
+
+        formatter = logging.Formatter('%(message)s')
+        self.logger = logging.getLogger('mini-afsd')
+        self.logger.setLevel(logging.DEBUG)
+        fh = logging.FileHandler(
+            self.log_folder.joinpath(datetime.now().strftime('%Y-%m-%d %H-%M-%S.log'))
+        )
+        fh.setLevel(logging.DEBUG)
+        fh.setFormatter(formatter)
+        self.logger.addHandler(fh)
+        ch = logging.StreamHandler()
+        ch.setLevel(logging.DEBUG)
+        ch.setFormatter(formatter)
+        self.logger.addHandler(ch)
+        self.logger.debug(f"Log started at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
 
         self.root = tk.Tk()
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
@@ -218,7 +237,7 @@ class Controller:
             handles.append('testing')
 
         if not handles:
-            print('No serial ports found, entering test mode')
+            self.logger.debug('No serial ports found, entering test mode')
             self.update_serial_port(None)
             return
 
@@ -297,6 +316,7 @@ class Controller:
         """Ensures proper shutdown of the user interface and serial connections."""
         self.root.destroy()
         self.labjack_handler.close()
+        self.logger.debug(f"\nLog ended at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         sys.exit()  # TODO serial port hanges when flushing, so exit without closing; check if that
         # is due to not actually being connected to the ESP
         self.serial_processor.close()
@@ -304,12 +324,16 @@ class Controller:
     def return_data(self):
         """Collects the current force and thermocouple data."""
         if self.labjack_handler.labjackHandle is not None:
-            combinedData = zip(
-                self.labjack_handler.timeData,
-                self.labjack_handler.forceData,
-                self.labjack_handler.TC_one_Data,
-                self.labjack_handler.TC_two_Data
-            )
+            combinedData = itertools.chain.from_iterable((
+                [['Time (s)', 'Force (N)', 'Thermocouple 1 (degrees C)',
+                  'Thermocouple 2 (degrees C)']],
+                zip(
+                    self.labjack_handler.timeData,
+                    self.labjack_handler.forceData,
+                    self.labjack_handler.TC_one_Data,
+                    self.labjack_handler.TC_two_Data
+                )
+            ))
         else:
             combinedData = None  # reached if not connected to anything
 
