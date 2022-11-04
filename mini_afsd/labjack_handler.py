@@ -41,15 +41,17 @@ class LabjackHandler:
             self.labjackHandle = ljm.openS("T7", "ANY", "ANY")
         except Exception as ex:
             if type(ex).__name__ != "LJMError":  # TODO is this trying to catch ljm.LJMError?
-                print("No Labjack Connected")
+                self.controller.logger.debug('No LabJack Connected')
             if allow_dummy_thread:
                 self.labjackHandle = 'dummy'
                 self.labjackThread = threading.Thread(target=self.startLabjackDummy, daemon=True)
-                print("Connected to dummy LabJack")
+                self.controller.logger.debug('CONNECTING TO LabJack EMULATOR!!!')
                 self.labjackThread.start()
+            else:
+                self.controller.logger.debug('No LabJack Connected')
         else:
             self.labjackThread = threading.Thread(target=self.startLabjack, daemon=True)
-            print("Connected to LabJack")
+            self.controller.logger.debug('Successfully connected to LabJack')
             self.labjackThread.start()
 
     def startLabjack(self):
@@ -134,15 +136,14 @@ class LabjackHandler:
                             avgResults[1] /= self.numDataAvg
                             avgResults[2] /= self.numDataAvg
                             force = (avgResults[2] - 0.5) * 333.61
+                            self.timeData.append(
+                                round(time.time() - self.startTime, 2)
+                            )
                             self.TC_one_Data.append(avgResults[0])
                             self.TC_two_Data.append(avgResults[1])
                             self.forceData.append(force)
                             self.controller.gui.tcOneVariable.set(round(avgResults[0], 2))
                             self.controller.gui.tcTwoVariable.set(round(avgResults[1], 2))
-                            self.controller.gui.display(force)
-                            self.timeData.append(
-                                round(time.time() - self.startTime, 2)
-                            )
                             self.controller.gui.display(force)
                             avgResults = [0, 0, 0]
                             avgNum = 0

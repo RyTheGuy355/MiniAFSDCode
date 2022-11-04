@@ -102,7 +102,7 @@ class SerialProcessor:
         if self._port is None:
             self.esp = None
         elif self._port == 'testing':
-            print('Connecting to dummy serial port')
+            self.controller.logger.debug('CONNECTING TO SERIAL PORT EMULATOR!!!')
             self.esp = DummySerial(port=port, baudrate=115200, timeout=1)
             self.start_threads()
         else:
@@ -110,8 +110,10 @@ class SerialProcessor:
                 self.esp = serial.Serial(port=self._port, baudrate=115200, timeout=1)
             except serial.SerialException:  # wrong port selected
                 self._port = None
+                self.controller.logger.debug('Failed to connect to serial port')
                 raise
             else:
+                self.controller.logger.debug(f'Successfully connected to serial port: {self.port}')
                 self.start_threads()
 
     def start_threads(self):
@@ -127,7 +129,7 @@ class SerialProcessor:
 
     def serialListen(self):
         """The event loop for the thread that reads messages from the serial port."""
-        print("Starting serial listener")
+        self.controller.logger.debug("Starting serial listener")
         while not self.close_port.is_set():
             if self.serialReadUnlocked.wait(timeout=0.5) and self.esp.in_waiting:
                 self.serialReadUnlocked.clear()
@@ -142,23 +144,23 @@ class SerialProcessor:
                     if not data:
                         continue
                     else:
-                        print(data)
+                        self.controller.logger.debug(data)
                 except Exception:
                     pass
                 self.serialReadUnlocked.set()
             time.sleep(0.01)
 
-        print("Stopping serial listener")
+        self.controller.logger.debug("Stopping serial listener")
         self.esp.flush()
         self.esp.close()
         try:
             self.controller.gui.sBut["state"] = "disabled"
         except Exception:
-            print("Window appears to be closed")
+            self.controller.logger.debug("Window appears to be closed")
 
     def serialReporter(self):
         """The event loop for the thread that sends messages to the serial port."""
-        print("Starting serial reporter")
+        self.controller.logger.debug("Starting serial reporter")
         while self.esp.is_open:
             if len(self.espBuffer) > 0:
                 for i, (bufferValue, wait_in_queue) in enumerate(
@@ -269,7 +271,7 @@ class SerialProcessor:
                 try:
                     header, values = entry.split(':')
                 except ValueError:  # message has multiple : at startup
-                    print(f'Encountered parsing error from: {entry}')
+                    self.controller.logger.debug(f'Encountered parsing error from: {entry}')
                     break
                 if header == 'MPos':
                     machine_position = [float(val) for val in values.split(',')]
@@ -384,8 +386,8 @@ class SerialProcessor:
         """
         self.espBuffer.append(code)
         self.espTypeBuffer.append(wait_in_queue)
-        print(f'added to buffer: {code}')
-        print(f'internal buffer: {len(self.espBuffer)}')
+        self.controller.logger.debug(f'added to buffer: {code}')
+        self.controller.logger.debug(f'internal buffer: {len(self.espBuffer)}')
 
 
 class DummySerial:
