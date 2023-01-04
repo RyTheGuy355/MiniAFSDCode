@@ -26,6 +26,24 @@ Installation
 Dependencies
 ~~~~~~~~~~~~
 
+
+Driver Dependencies
+^^^^^^^^^^^^^^^^^^^
+
+The `LJM` driver from LabJack must be installed to interface with the
+LabJack for measuring the thermocouple outputs, which can be downloaded from
+https://labjack.com/support/software/installers/ljm.
+
+
+The driver needed for computers to properly connect to the serial
+port's USB interface is available from
+https://oemdrivers.com/usb-cp2104-usb-to-uart-driver.
+(Change this in the future if the connector changes)
+
+
+Python Dependencies
+^^^^^^^^^^^^^^^^^^^
+
 mini_afsd requires `Python <https://python.org>`_ version 3.7 or later
 and the following Python libraries:
 
@@ -36,9 +54,6 @@ and the following Python libraries:
 
 All of the required Python libraries should be automatically installed when
 installing mini_afsd using any of the installation methods below.
-
-The `LJM` driver from LabJack must also be installed, which can be downloaded from
-https://labjack.com/support/software/installers/ljm.
 
 
 Installing Python
