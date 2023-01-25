@@ -19,6 +19,10 @@ Introduction
 This repository contains code for controlling a miniturized AFSD machine and
 is used by the `Yu group at Virginia Tech <https://yu.mse.vt.edu>`_.
 
+Communication with the machine is achieved using `FluidNC <https://github.com/bdring/FluidNC>`_,
+and future modifications to the firmware or code inputs can be helped by looking
+through FluidNC's documentation.
+
 
 Installation
 ------------
