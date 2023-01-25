@@ -112,9 +112,13 @@ class Gui:
         zeroFrame.grid_propagate(0)
         zeroFrame.grid(column=1, row=0, in_=tFrame)
 
-        commandFrame = tk.Frame(width=235, height=220, bg="#e3f0fa",)
+        commandFrame = tk.Frame(width=235, height=220, bg="#e3f0fa")
         commandFrame.grid_propagate(0)
         commandFrame.grid(column=0, row=1, in_=tFrame)
+
+        overrideFrame = tk.Frame(bg="#e3f0fa")
+        overrideFrame.grid_propagate(0)
+        overrideFrame.grid(column=0, row=2, in_=tFrame)
 
         # Create Position Frame Widgets
         workLabel = tk.Label(
@@ -424,6 +428,54 @@ class Gui:
             state='disabled'
         )
         self.resetBut.grid(column=2, row=5, pady=4, in_=zeroFrame)
+
+        feed_minus10_But = tk.Button(
+            text='F-10%',
+            font=("Times New Roman", 12),
+            width=7,
+            pady=5,
+            bg="#8f8f8f",
+            fg="black",
+            relief="raised",
+            command=lambda: self.sendCode(b'\x92', False),
+        )
+        feed_minus10_But.grid(column=0, row=0, in_=overrideFrame, pady=5)
+
+        feed_plus10_But = tk.Button(
+            text='F+10%',
+            font=("Times New Roman", 12),
+            width=7,
+            pady=5,
+            bg="#8f8f8f",
+            fg="black",
+            relief="raised",
+            command=lambda: self.sendCode(b'\x91', False),
+        )
+        feed_plus10_But.grid(column=1, row=0, in_=overrideFrame, pady=5)
+
+        spindle_minus10_But = tk.Button(
+            text='S-10%',
+            font=("Times New Roman", 12),
+            width=7,
+            pady=5,
+            bg="#8f8f8f",
+            fg="black",
+            relief="raised",
+            command=lambda: self.sendCode(b'\x9B', False),
+        )
+        spindle_minus10_But.grid(column=0, row=1, in_=overrideFrame, pady=5)
+
+        spindle_plus10_But = tk.Button(
+            text='S+10%',
+            font=("Times New Roman", 12),
+            width=7,
+            pady=5,
+            bg="#8f8f8f",
+            fg="black",
+            relief="raised",
+            command=lambda: self.sendCode(b'\x9A', False),
+        )
+        spindle_plus10_But.grid(column=1, row=1, in_=overrideFrame, pady=5)
 
     def createActuatorFrame(self):
         """Creates the actuator control section of the GUI."""

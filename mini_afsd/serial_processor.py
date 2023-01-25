@@ -24,6 +24,10 @@ class SerialProcessor:
         reduces to 0 if buffer is full.
     work_offsets : tuple(int, int, int, int)
         The offsets for the x, y, z, and a axes on the mill, respectively.
+    feed_speed : int
+        The current feed speed of the mill, as an integer percentage. Default is 100.
+    spindle_speed : int
+        The current spindle speed of the mill, as an integer percentage. Default is 100.
     close_port : threading.Event
 
     commandInvalid : threading.Event
@@ -57,6 +61,9 @@ class SerialProcessor:
         self.buffer_length = 15
         self.state = 'Idle'
         self.work_offsets = (0, 0, 0, 0)
+        self.feed_speed = 100
+        self.spindle_speed = 100
+
         self.close_port = threading.Event()
         self.commandInvalid = threading.Event()
         self.serialReadUnlocked = threading.Event()
@@ -256,6 +263,8 @@ class SerialProcessor:
         work_position = None
         buffer_length = None
         total_message = message.decode().split('|')
+        feed_speed = None
+        spindle_speed = None
         if len(total_message) < 2:  # accidently received b'ok'
             return
         # message is sent as
@@ -279,6 +288,10 @@ class SerialProcessor:
                     work_position = [float(val) for val in values.split(',')]
                 elif header == 'Bf':
                     buffer_length = int(values.split(',')[0])
+                elif header == 'Ov':  # typically Ov:100,100,100
+                    # override values for feed (G1,G2,G3 motion), rapid (G0 motion), and spindle
+                    # in percentages
+                    feed_speed, _, spindle_speed = [int(val) for val in values.split(',')]
         # print(message.decode())
         if machine_position is not None:
             machine_x = machine_position[0]
@@ -324,6 +337,10 @@ class SerialProcessor:
                 self.controller.gui.resetBut.configure(fg="grey", state='disabled')
             elif self.state == 'Alarm':
                 self.controller.gui.resetBut.configure(fg='black', state='normal')
+
+        if feed_speed is not None:
+            self.feed_speed = feed_speed
+            self.spindle_speed = spindle_speed
 
         self.controller.gui.stateVar.set(self.state)
         self.state_exact.set()
@@ -409,6 +426,8 @@ class DummySerial:
         self.outputs = deque()
         self.machine_position = (0, 0, 0, 0)
         self.offsets = (0, 0, 0, 0)
+        # speeds for feed (G1,G2,G3 motion), rapid (G0 motion), and spindle
+        self.speeds = [100, 100, 100]
 
         self._read_thread = threading.Thread(target=self.main_loop, daemon=True)
         self._read_thread.start()
@@ -420,8 +439,12 @@ class DummySerial:
                 message_bytes = self.inputs.popleft()
                 try:
                     message = message_bytes.decode().strip('\n')
-                except UnicodeDecodeError:  # probably b'\x85'
-                    message = 'cancel jog'
+                except UnicodeDecodeError:
+                    if message_bytes == b'\x85':
+                        message = 'cancel jog'
+                    else:
+                        message = message_bytes.hex()
+
                 if not message:
                     continue
 
@@ -452,6 +475,14 @@ class DummySerial:
                             self.state = 'Other'
                     else:
                         output = b'error:9'
+                elif message == '91':  # b'\x91' increase feed rate by 10%
+                    self.speeds[0] += 10
+                elif message == '92':  # b'\x92' decrease feed rate by 10%
+                    self.speeds[0] -= 10
+                elif message == '9a':  # b'\x9A' increase spindle rate by 10%
+                    self.speeds[2] += 10
+                elif message == '9b':  # b'\x9B' decrease spindle rate by 10%
+                    self.speeds[2] -= 10
                 elif message == '?':
                     if self.state not in ('Idle', 'Alarm'):
                         self.machine_position = (
@@ -466,7 +497,9 @@ class DummySerial:
                         )
                     output = f'<{self.state}|MPos:{self.machine_position[0]:.3f},{self.machine_position[1]:.3f},{self.machine_position[2]:.3f},{self.machine_position[3]:.3f}|Bf:{self.buffer},127|FS:0,0>'
                     if random.choice([0, 0, 0, 1]):
-                        output = output[:-1] + f'|WCO:{self.offsets[0]:.3f},{self.offsets[1]:.3f},{self.offsets[2]:.3f},{self.offsets[3]:.3f}'
+                        output = output[:-1] + f'|WCO:{self.offsets[0]:.3f},{self.offsets[1]:.3f},{self.offsets[2]:.3f},{self.offsets[3]:.3f}>'
+                    elif random.choice([0, 0, 0, 1]):
+                        output = output[:-1] + f'|Ov:{self.speeds[0]},{self.speeds[1]},{self.speeds[2]}>'
                     output = output.encode()
                 elif message.lower() == 'alarm':
                     self.state = 'Alarm'
