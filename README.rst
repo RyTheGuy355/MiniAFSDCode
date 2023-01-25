@@ -16,7 +16,8 @@ mini_afsd is a program for controlling a miniturized additive friction stir depo
 Introduction
 ------------
 
-To be added.
+This repository contains code for controlling a miniturized AFSD machine and
+is used by the `Yu group at Virginia Tech <https://yu.mse.vt.edu>`_.
 
 
 Installation
