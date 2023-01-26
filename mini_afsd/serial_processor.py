@@ -24,10 +24,6 @@ class SerialProcessor:
         reduces to 0 if buffer is full.
     work_offsets : tuple(int, int, int, int)
         The offsets for the x, y, z, and a axes on the mill, respectively.
-    feed_speed : int
-        The current feed speed of the mill, as an integer percentage. Default is 100.
-    spindle_speed : int
-        The current spindle speed of the mill, as an integer percentage. Default is 100.
     close_port : threading.Event
 
     commandInvalid : threading.Event
@@ -61,8 +57,6 @@ class SerialProcessor:
         self.buffer_length = 15
         self.state = 'Idle'
         self.work_offsets = (0, 0, 0, 0)
-        self.feed_speed = 100
-        self.spindle_speed = 100
 
         self.close_port = threading.Event()
         self.commandInvalid = threading.Event()
@@ -339,8 +333,9 @@ class SerialProcessor:
                 self.controller.gui.resetBut.configure(fg='black', state='normal')
 
         if feed_speed is not None:
-            self.feed_speed = feed_speed
-            self.spindle_speed = spindle_speed
+            self.controller.gui.feed_var.set(f'{feed_speed}%')
+            self.controller.gui.spindle_var.set(f'{spindle_speed}%')
+
 
         self.controller.gui.stateVar.set(self.state)
         self.state_exact.set()
@@ -479,10 +474,18 @@ class DummySerial:
                     self.speeds[0] += 10
                 elif message == '92':  # b'\x92' decrease feed rate by 10%
                     self.speeds[0] -= 10
+                elif message == '93':  # b'\x93' increase feed rate by 1%
+                    self.speeds[0] += 1
+                elif message == '94':  # b'\x94' decrease feed rate by 1%
+                    self.speeds[0] -= 1
                 elif message == '9a':  # b'\x9A' increase spindle rate by 10%
                     self.speeds[2] += 10
                 elif message == '9b':  # b'\x9B' decrease spindle rate by 10%
                     self.speeds[2] -= 10
+                elif message == '9c':  # b'\x9C' increase spindle rate by 1%
+                    self.speeds[2] += 1
+                elif message == '9d':  # b'\x9D' decrease spindle rate by 1%
+                    self.speeds[2] -= 1
                 elif message == '?':
                     if self.state not in ('Idle', 'Alarm'):
                         self.machine_position = (

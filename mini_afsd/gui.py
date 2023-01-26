@@ -76,22 +76,31 @@ class Gui:
         self.createSaveFrame()
         self.createBottomButtons()
 
+        self.topFrame.columnconfigure(0, weight=1)
+        self.topFrame.columnconfigure(1, weight=1)
+        self.topFrame.columnconfigure(2, weight=1)
+        self.topFrame.rowconfigure(0, weight=1)
+
     def createMainFrames(self):
         """Creates the main frames for the GUI."""
-        self.topFrame = tk.Frame(width=1300, height=600, bg="#e3f0fa")
-        self.topFrame.grid(column=0, row=0)
+        self.topFrame = tk.Frame(width=1250, height=600, bg="#e3f0fa")
+        self.topFrame.grid(column=0, row=0, sticky=tk.NSEW)
         self.topFrame.grid_propagate(0)
 
         self.botFrame = tk.Frame(
-            width=1300, height=130, bg="#e3f0fa", bd=5, relief="groove", padx=10, pady=10,
+            width=1250, height=130, bg="#e3f0fa", bd=5, relief="groove", padx=10, pady=10,
         )
-        self.botFrame.grid(column=0, row=1)
+        self.botFrame.grid(column=0, row=1, sticky=tk.NSEW)
         self.botFrame.grid_propagate(0)
+
+        self.controller.root.columnconfigure(0, weight=1)
+        self.controller.root.rowconfigure(0, weight=1)
+        self.controller.root.rowconfigure(1, weight=1)
 
     def createTraverseFrame(self):
         """Creates the traversal section of the GUI."""
         tFrame = tk.LabelFrame(
-            width=550,
+            width=500,
             height=600,
             bg="#e3f0fa",
             labelwidget=tk.Label(font=("Times New Roman", 22), text="TRAVERSE", fg="black"),
@@ -100,25 +109,21 @@ class Gui:
             padx=10,
             pady=10,
         )
-        tFrame.grid(column=0, row=0, in_=self.topFrame)
+        tFrame.grid(column=0, row=0, in_=self.topFrame, sticky=tk.NSEW)
         tFrame.grid_propagate(0)
 
         # Create Main Frames
-        posFrame = tk.Frame(width=240, height=175, bg="#e3f0fa", padx=2, pady=2,)
-        posFrame.grid_propagate(0)
-        posFrame.grid(column=0, row=0, in_=tFrame)
+        posFrame = tk.Frame(bg="#e3f0fa", padx=2, pady=2)
+        posFrame.grid(column=0, row=0, in_=tFrame, sticky=tk.NSEW)
 
-        zeroFrame = tk.Frame(width=240, height=200, bg="#e3f0fa", padx=15, pady=10)
-        zeroFrame.grid_propagate(0)
-        zeroFrame.grid(column=1, row=0, in_=tFrame)
+        commandFrame = tk.Frame(bg="#e3f0fa", padx=2, pady=2)
+        commandFrame.grid(column=0, row=1, in_=tFrame, sticky=tk.NSEW)
 
-        commandFrame = tk.Frame(width=235, height=220, bg="#e3f0fa")
-        commandFrame.grid_propagate(0)
-        commandFrame.grid(column=0, row=1, in_=tFrame)
+        overrideFrame = tk.Frame(bg="#e3f0fa", padx=2, pady=2)
+        overrideFrame.grid(column=0, row=0, in_=commandFrame, sticky=tk.EW)
 
-        overrideFrame = tk.Frame(bg="#e3f0fa")
-        overrideFrame.grid_propagate(0)
-        overrideFrame.grid(column=0, row=2, in_=tFrame)
+        millButtonsFrame = tk.Frame(bg="#e3f0fa", padx=5, pady=5)
+        millButtonsFrame.grid(column=1, row=0, in_=commandFrame, sticky=tk.E)
 
         # Create Position Frame Widgets
         workLabel = tk.Label(
@@ -294,9 +299,9 @@ class Gui:
             bg="#8f8f8f",
             fg="black",
             relief="raised",
-            command=lambda: self.zeroCord(b"X"),
+            command=lambda: self.zeroCord(b'X'),
         )
-        zeroXBut.grid(column=0, row=0, in_=zeroFrame, pady=5, padx=5)
+        zeroXBut.grid(column=3, row=1, in_=posFrame, pady=5, padx=5)
 
         zeroYBut = tk.Button(
             text="Zero Y",
@@ -308,7 +313,7 @@ class Gui:
             relief="raised",
             command=lambda: self.zeroCord(b"Y"),
         )
-        zeroYBut.grid(column=0, row=1, in_=zeroFrame, pady=5)
+        zeroYBut.grid(column=3, row=2, in_=posFrame, pady=5)
 
         zeroZBut = tk.Button(
             text="Zero Z",
@@ -320,7 +325,7 @@ class Gui:
             relief="raised",
             command=lambda: self.zeroCord(b"Z"),
         )
-        zeroZBut.grid(column=0, row=2, in_=zeroFrame, pady=5)
+        zeroZBut.grid(column=3, row=3, in_=posFrame, pady=5)
 
         zeroABut = tk.Button(
             text="Zero A",
@@ -332,7 +337,7 @@ class Gui:
             relief="raised",
             command=lambda: self.zeroCord(b"A"),
         )
-        zeroABut.grid(column=0, row=3, in_=zeroFrame, pady=5)
+        zeroABut.grid(column=3, row=4, in_=posFrame, pady=5)
 
         homeXBut = tk.Button(
             text="Home X",
@@ -342,9 +347,9 @@ class Gui:
             bg="#8f8f8f",
             fg="black",
             relief="raised",
-            command=lambda: self.sendCode(b"$HX", False)
+            command=lambda: self.sendCode(b'$HX', False)
         )
-        homeXBut.grid(column=1, row=0, in_=zeroFrame, pady=5, padx=5)
+        homeXBut.grid(column=4, row=1, in_=posFrame, pady=5, padx=5)
 
         homeYBut = tk.Button(
             text="Home Y",
@@ -356,7 +361,7 @@ class Gui:
             relief="raised",
             command=lambda: self.sendCode(b"$HY", False)
         )
-        homeYBut.grid(column=1, row=1, in_=zeroFrame, pady=5)
+        homeYBut.grid(column=4, row=2, in_=posFrame, pady=5)
 
         homeZBut = tk.Button(
             text="Home Z",
@@ -368,7 +373,7 @@ class Gui:
             relief="raised",
             command=lambda: self.sendCode(b"$HZ", False)
         )
-        homeZBut.grid(column=1, row=2, in_=zeroFrame, pady=5)
+        homeZBut.grid(column=4, row=3, in_=posFrame, pady=5)
 
         homeABut = tk.Button(
             text="Home A",
@@ -380,31 +385,19 @@ class Gui:
             relief="raised",
             command=lambda: self.sendCode(b"$HA", False)
         )
-        homeABut.grid(column=1, row=3, in_=zeroFrame, pady=5)
+        homeABut.grid(column=4, row=4, in_=posFrame, pady=5)
 
         homeAllBut = tk.Button(
-            text="Home All",
+            text="Home\nAll",
             font=("Times New Roman", 12),
-            width=9,
+            width=7,
             pady=5,
             bg="#91ceff",
             fg="black",
             relief="raised",
             command=lambda: self.sendCode(b"$H", False)
         )
-        homeAllBut.grid(column=2, row=1, in_=zeroFrame, pady=5)
-
-        self.enXYBut = tk.Button(
-            text="Disable Drives",
-            font=("Times New Roman", 12),
-            width=9,
-            pady=5,
-            bg="#8efa8e",
-            fg="black",
-            relief="raised",
-            command=lambda: self.sendCode(b"$MD", False),
-        )
-        self.enXYBut.grid(column=2, row=0, in_=zeroFrame)
+        homeAllBut.grid(column=4, row=5, in_=posFrame, pady=5, rowspan=2, sticky=tk.NS)
 
         self.cancelJogBut = tk.Button(
             text="Cancel Jog",
@@ -413,7 +406,7 @@ class Gui:
             fg="black",
             command=lambda: self.sendCode(b'\x85', False),
         )
-        self.cancelJogBut.grid(column=2, row=4, in_=zeroFrame)
+        self.cancelJogBut.grid(column=0, row=0, in_=millButtonsFrame, sticky=tk.EW)
 
         self.resetBut = tk.Button(
             text="Reset &\nUnlock",
@@ -427,60 +420,146 @@ class Gui:
             ],
             state='disabled'
         )
-        self.resetBut.grid(column=2, row=5, pady=4, in_=zeroFrame)
+        self.resetBut.grid(column=0, row=1, pady=4, in_=millButtonsFrame, sticky=tk.EW)
+
+        self.enXYBut = tk.Button(  # TODO should probably rename; enable xya is old
+            text="Disable Drives",
+            font=("Times New Roman", 12),
+            width=11,
+            pady=5,
+            bg="#8efa8e",
+            fg="black",
+            relief="raised",
+            command=lambda: self.sendCode(b"$MD", False),
+        )
+        self.enXYBut.grid(column=0, row=2, in_=millButtonsFrame, sticky=tk.EW)
+
+        tk.Label(
+            text='Feed', font=('Times New Roman', 18), fg="black", bg="#e3f0fa", width=5, pady=10,
+        ).grid(column=0, row=0, padx=3, in_=overrideFrame)
+
+        tk.Label(
+            text='Spindle', font=('Times New Roman', 18), fg="black", bg="#e3f0fa", width=5, pady=10,
+        ).grid(column=0, row=1, padx=3, in_=overrideFrame)
+
+        self.feed_var = tk.StringVar(value='100%')
+        feed_label = tk.Label(
+            textvariable=self.feed_var,
+            width=5,
+            font=("Times New Roman", 18),
+            fg="black",
+            bg="#EEE",
+            relief="groove",
+            bd=1,
+            pady=6,
+        )
+        feed_label.grid(column=1, row=0, in_=overrideFrame)
 
         feed_minus10_But = tk.Button(
-            text='F-10%',
+            text='-10',
             font=("Times New Roman", 12),
-            width=7,
-            pady=5,
             bg="#8f8f8f",
             fg="black",
             relief="raised",
             command=lambda: self.sendCode(b'\x92', False),
         )
-        feed_minus10_But.grid(column=0, row=0, in_=overrideFrame, pady=5)
+        feed_minus10_But.grid(column=2, row=0, in_=overrideFrame, padx=3)
+
+        feed_minus1_But = tk.Button(
+            text='-1 ',
+            font=("Times New Roman", 12),
+            bg="#8f8f8f",
+            fg="black",
+            relief="raised",
+            command=lambda: self.sendCode(b'\x94', False),
+        )
+        feed_minus1_But.grid(column=3, row=0, in_=overrideFrame, padx=3)
+
+        feed_plus1_But = tk.Button(
+            text='+1 ',
+            font=("Times New Roman", 12),
+            bg="#8f8f8f",
+            fg="black",
+            relief="raised",
+            command=lambda: self.sendCode(b'\x93', False),
+        )
+        feed_plus1_But.grid(column=4, row=0, in_=overrideFrame, padx=3)
 
         feed_plus10_But = tk.Button(
-            text='F+10%',
+            text='+10',
             font=("Times New Roman", 12),
-            width=7,
-            pady=5,
             bg="#8f8f8f",
             fg="black",
             relief="raised",
             command=lambda: self.sendCode(b'\x91', False),
         )
-        feed_plus10_But.grid(column=1, row=0, in_=overrideFrame, pady=5)
+        feed_plus10_But.grid(column=5, row=0, in_=overrideFrame, padx=3)
+
+        self.spindle_var = tk.StringVar(value='100%')
+        spindle_label = tk.Label(
+            textvariable=self.spindle_var,
+            width=5,
+            font=("Times New Roman", 18),
+            fg="black",
+            bg="#EEE",
+            relief="groove",
+            bd=1,
+            pady=6,
+        )
+        spindle_label.grid(column=1, row=1, in_=overrideFrame)
 
         spindle_minus10_But = tk.Button(
-            text='S-10%',
+            text='-10',
             font=("Times New Roman", 12),
-            width=7,
-            pady=5,
             bg="#8f8f8f",
             fg="black",
             relief="raised",
             command=lambda: self.sendCode(b'\x9B', False),
         )
-        spindle_minus10_But.grid(column=0, row=1, in_=overrideFrame, pady=5)
+        spindle_minus10_But.grid(column=2, row=1, in_=overrideFrame, pady=5)
+
+        spindle_minus1_But = tk.Button(
+            text='-1 ',
+            font=("Times New Roman", 12),
+            bg="#8f8f8f",
+            fg="black",
+            relief="raised",
+            command=lambda: self.sendCode(b'\x9D', False),
+        )
+        spindle_minus1_But.grid(column=3, row=1, in_=overrideFrame, pady=5)
+
+        spindle_plus1_But = tk.Button(
+            text='+1 ',
+            font=("Times New Roman", 12),
+            bg="#8f8f8f",
+            fg="black",
+            relief="raised",
+            command=lambda: self.sendCode(b'\x9C', False),
+        )
+        spindle_plus1_But.grid(column=4, row=1, in_=overrideFrame, pady=5)
 
         spindle_plus10_But = tk.Button(
-            text='S+10%',
+            text='+10',
             font=("Times New Roman", 12),
-            width=7,
-            pady=5,
             bg="#8f8f8f",
             fg="black",
             relief="raised",
             command=lambda: self.sendCode(b'\x9A', False),
         )
-        spindle_plus10_But.grid(column=1, row=1, in_=overrideFrame, pady=5)
+        spindle_plus10_But.grid(column=5, row=1, in_=overrideFrame, pady=5)
+
+        tFrame.columnconfigure(0, weight=1)
+        tFrame.rowconfigure(0, weight=1)
+        tFrame.rowconfigure(1, weight=1)
+
+        commandFrame.columnconfigure(0, weight=1)
+        commandFrame.columnconfigure(1, weight=1)
+        commandFrame.rowconfigure(0, weight=1)
 
     def createActuatorFrame(self):
         """Creates the actuator control section of the GUI."""
-        self.aFrame = tk.LabelFrame(
-            width=450,
+        aFrame = tk.LabelFrame(
+            width=420,
             height=600,
             bg="#e3f0fa",
             labelwidget=tk.Label(font=("Times New Roman", 22), text="SPINDLE", fg="black"),
@@ -489,31 +568,28 @@ class Gui:
             padx=10,
             pady=10,
         )
-        self.aFrame.grid(column=1, row=0, in_=self.topFrame)
-        self.aFrame.grid_propagate(0)
-
-        butFrame = tk.Frame(width=440, height=100, bg="#e3f0fa", padx=2, pady=2,)
-        butFrame.grid(column=0, row=0, in_=self.aFrame, pady=5)
-        butFrame.grid_propagate(0)
+        aFrame.grid(column=1, row=0, in_=self.topFrame, sticky=tk.NSEW)
+        aFrame.grid_propagate(0)
 
         displayFrame = tk.Frame(bg="#e3f0fa")
-        displayFrame.grid(column=0, row=0, in_=butFrame)
+        displayFrame.grid(column=0, row=0, in_=aFrame, sticky=tk.NSEW)
 
         self.figure = Figure(figsize=(3.8, 3), tight_layout=True)
         self.axis = self.figure.add_subplot()
         self.line = self.axis.plot(self.times, self.displayData)[0]
         self.axis.set_xlabel("Time")
-        self.axis.set_ylabel("Force")
+        self.axis.set_ylabel("Force (N)")
         self.axis.set_xticklabels([])
+        self.axis.set_xticks([])
 
         self.canvas = FigureCanvasTkAgg(self.figure)
         self.canvas.get_tk_widget().grid(
-            column=0, row=0, rowspan=2, columnspan=2, in_=displayFrame, sticky=tk.E + tk.W
+            column=0, row=0, in_=displayFrame, sticky=tk.NSEW
         )
         self.canvas.draw_idle()
 
         gCodeFrame = tk.Frame(bg="#e3f0fa")
-        gCodeFrame.grid(column=0, row=2, in_=displayFrame, pady=30, sticky=tk.E + tk.W)
+        gCodeFrame.grid(column=0, row=1, in_=aFrame, pady=15, sticky=tk.EW)
         gCodeFrame.grid_propagate(0)
 
         codeFieldFrame = tk.Frame(bg="#e3f0fa")
@@ -529,14 +605,14 @@ class Gui:
             fg="black",
             justify=tk.LEFT,
         )
-        gCodeLabel.grid(column=0, row=0, in_=codeFieldFrame, sticky=tk.W)
+        gCodeLabel.grid(column=0, row=0, in_=codeFieldFrame, sticky=tk.EW)
 
         self.gCodeText = tk.StringVar()
         gCodeEntry = tk.Entry(
             width=30, font=("Times New Roman", 18), bg="white", fg="black",
             textvariable=self.gCodeText,
         )
-        gCodeEntry.grid(column=0, row=1, in_=codeFieldFrame, sticky=tk.W)
+        gCodeEntry.grid(column=0, row=1, in_=codeFieldFrame, sticky=tk.EW)
         gCodeEntry.bind("<KeyRelease-Return>", self.sendGCode)
 
         gCodeFileFrame = tk.Frame(bg="#e3f0fa",)
@@ -613,7 +689,7 @@ class Gui:
             padx=10,
             pady=10,
         )
-        sFrame.grid(column=2, row=0, in_=self.topFrame)
+        sFrame.grid(column=2, row=0, in_=self.topFrame, sticky=tk.NSEW)
         sFrame.grid_propagate(0)
 
         self.saveDataBut = tk.Button(
@@ -684,10 +760,10 @@ class Gui:
             bg="#8efa8e",
             fg="black",
             command=self.sendStartStop,
-            width=20,
-            pady=20,
+            width=15,
+            pady=5,
         )
-        self.sBut.grid(column=1, row=1, in_=self.botFrame)
+        self.sBut.grid(column=0, row=0, in_=self.botFrame, sticky=tk.NS)
 
     def sendStartStop(self):
         """Sends the code to turn the mill on and off."""
