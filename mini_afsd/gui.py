@@ -94,7 +94,7 @@ class Gui:
         self.botFrame.grid_propagate(0)
 
         self.controller.root.columnconfigure(0, weight=1)
-        self.controller.root.rowconfigure(0, weight=1)
+        self.controller.root.rowconfigure(0, weight=4)
         self.controller.root.rowconfigure(1, weight=1)
 
     def createTraverseFrame(self):
@@ -574,7 +574,11 @@ class Gui:
         displayFrame = tk.Frame(bg="#e3f0fa")
         displayFrame.grid(column=0, row=0, in_=aFrame, sticky=tk.NSEW)
 
-        self.figure = Figure(figsize=(3.8, 3), tight_layout=True)
+        gCodeFrame = tk.Frame(bg="#e3f0fa")
+        gCodeFrame.grid(column=0, row=1, in_=aFrame, pady=5, sticky=tk.NSEW)
+        gCodeFrame.grid_propagate(0)
+
+        self.figure = Figure(figsize=(3, 2), tight_layout=True)
         self.axis = self.figure.add_subplot()
         self.line = self.axis.plot(self.times, self.displayData)[0]
         self.axis.set_xlabel("Time")
@@ -588,13 +592,6 @@ class Gui:
         )
         self.canvas.draw_idle()
 
-        gCodeFrame = tk.Frame(bg="#e3f0fa")
-        gCodeFrame.grid(column=0, row=1, in_=aFrame, pady=15, sticky=tk.EW)
-        gCodeFrame.grid_propagate(0)
-
-        codeFieldFrame = tk.Frame(bg="#e3f0fa")
-        codeFieldFrame.grid(column=0, row=0, in_=gCodeFrame, sticky=tk.E)
-
         gCodeLabel = tk.Label(
             text="Enter GCode:",
             font=("Times New Roman", 14),
@@ -605,18 +602,18 @@ class Gui:
             fg="black",
             justify=tk.LEFT,
         )
-        gCodeLabel.grid(column=0, row=0, in_=codeFieldFrame, sticky=tk.EW)
+        gCodeLabel.grid(column=0, row=0, in_=gCodeFrame, sticky=tk.EW)
 
         self.gCodeText = tk.StringVar()
         gCodeEntry = tk.Entry(
             width=30, font=("Times New Roman", 18), bg="white", fg="black",
             textvariable=self.gCodeText,
         )
-        gCodeEntry.grid(column=0, row=1, in_=codeFieldFrame, sticky=tk.EW)
+        gCodeEntry.grid(column=0, row=1, in_=gCodeFrame, sticky=tk.EW)
         gCodeEntry.bind("<KeyRelease-Return>", self.sendGCode)
 
         gCodeFileFrame = tk.Frame(bg="#e3f0fa",)
-        gCodeFileFrame.grid(column=0, row=2, pady=10, in_=codeFieldFrame)
+        gCodeFileFrame.grid(column=0, row=2, pady=10, in_=gCodeFrame)
 
         gCodeFileLabel = tk.Label(
             text="Enter GCode Filepath:",
@@ -676,6 +673,22 @@ class Gui:
             command=lambda: self.gCodeFileText.set(''),
         )
         gCodeFileClearButton.grid(column=1, pady=2, row=2, in_=gCodeFileFrame)
+
+        aFrame.columnconfigure(0, weight=1)
+        aFrame.rowconfigure(0, weight=1)
+        aFrame.rowconfigure(1, weight=1)
+
+        displayFrame.columnconfigure(0, weight=1)
+        displayFrame.rowconfigure(0, weight=1)
+
+        gCodeFrame.columnconfigure(0, weight=1)
+        gCodeFrame.rowconfigure(0, weight=1)
+        gCodeFrame.rowconfigure(1, weight=1)
+
+        gCodeFileFrame.columnconfigure(0, weight=1)
+        gCodeFileFrame.columnconfigure(1, weight=1)
+        gCodeFileFrame.rowconfigure(0, weight=1)
+        gCodeFileFrame.rowconfigure(1, weight=1)
 
     def createSaveFrame(self):
         """Creates the section for saving, clearing, and collecting data."""
