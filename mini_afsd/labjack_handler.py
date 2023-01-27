@@ -90,8 +90,8 @@ class LabjackHandler:
                             self.TC_one_Data.append(avgResults[0])
                             self.TC_two_Data.append(avgResults[1])
                             self.forceData.append(force)
-                            self.controller.gui.tcOneVariable.set(round(avgResults[0], 2))
-                            self.controller.gui.tcTwoVariable.set(round(avgResults[1], 2))
+                            self.controller.gui.tcOneVariable.set(f'{avgResults[0]:.2f} °C')
+                            self.controller.gui.tcTwoVariable.set(f'{avgResults[1]:.2f} °C')
                             self.controller.gui.display(force)
                             self.timeData.append(
                                 round(time.time() - self.startTime, 2)
@@ -108,8 +108,8 @@ class LabjackHandler:
                 ljm.eWriteAddress(self.labjackHandle, 1000, ljm.constants.FLOAT32, 0)
             else:
                 results = ljm.eReadAddresses(self.labjackHandle, numFrames, addresses, dataTypes)
-                self.controller.gui.tcOneVariable.set(round(results[0], 2))
-                self.controller.gui.tcTwoVariable.set(round(results[1], 2))
+                self.controller.gui.tcOneVariable.set(f'{results[0]:.2f} °C')
+                self.controller.gui.tcTwoVariable.set(f'{results[1]:.2f} °C')
                 force = (results[2] - 0.5) * 333.61
                 self.controller.gui.display(force)
 
@@ -142,8 +142,8 @@ class LabjackHandler:
                             self.TC_one_Data.append(avgResults[0])
                             self.TC_two_Data.append(avgResults[1])
                             self.forceData.append(force)
-                            self.controller.gui.tcOneVariable.set(round(avgResults[0], 2))
-                            self.controller.gui.tcTwoVariable.set(round(avgResults[1], 2))
+                            self.controller.gui.tcOneVariable.set(f'{avgResults[0]:.2f} °C')
+                            self.controller.gui.tcTwoVariable.set(f'{avgResults[1]:.2f} °C')
                             self.controller.gui.display(force)
                             avgResults = [0, 0, 0]
                             avgNum = 0
@@ -161,8 +161,8 @@ class LabjackHandler:
                     random.normalvariate(25, 0.5),
                     random.normalvariate(1, 0.2)
                 ]
-                self.controller.gui.tcOneVariable.set(round(results[0], 2))
-                self.controller.gui.tcTwoVariable.set(round(results[1], 2))
+                self.controller.gui.tcOneVariable.set(f'{results[0]:.2f} °C')
+                self.controller.gui.tcTwoVariable.set(f'{results[1]:.2f} °C')
                 force = (results[2] - 0.5) * 333.61
                 self.controller.gui.display(force)
 

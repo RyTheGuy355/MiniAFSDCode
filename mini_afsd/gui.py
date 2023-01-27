@@ -613,7 +613,7 @@ class Gui:
         gCodeEntry.bind("<KeyRelease-Return>", self.sendGCode)
 
         gCodeFileFrame = tk.Frame(bg="#e3f0fa",)
-        gCodeFileFrame.grid(column=0, row=2, pady=10, in_=gCodeFrame)
+        gCodeFileFrame.grid(column=0, row=2, pady=10, in_=gCodeFrame, sticky=tk.NSEW)
 
         gCodeFileLabel = tk.Label(
             text="Enter GCode Filepath:",
@@ -676,19 +676,18 @@ class Gui:
 
         aFrame.columnconfigure(0, weight=1)
         aFrame.rowconfigure(0, weight=1)
-        aFrame.rowconfigure(1, weight=1)
+        aFrame.rowconfigure(1, weight=2)
 
         displayFrame.columnconfigure(0, weight=1)
         displayFrame.rowconfigure(0, weight=1)
 
         gCodeFrame.columnconfigure(0, weight=1)
-        gCodeFrame.rowconfigure(0, weight=1)
-        gCodeFrame.rowconfigure(1, weight=1)
+        gCodeFrame.rowconfigure(2, weight=1)
 
         gCodeFileFrame.columnconfigure(0, weight=1)
-        gCodeFileFrame.columnconfigure(1, weight=1)
         gCodeFileFrame.rowconfigure(0, weight=1)
         gCodeFileFrame.rowconfigure(1, weight=1)
+        gCodeFileFrame.rowconfigure(2, weight=1)
 
     def createSaveFrame(self):
         """Creates the section for saving, clearing, and collecting data."""
@@ -705,28 +704,6 @@ class Gui:
         sFrame.grid(column=2, row=0, in_=self.topFrame, sticky=tk.NSEW)
         sFrame.grid_propagate(0)
 
-        self.saveDataBut = tk.Button(
-            text="Save All Data",
-            font=("Times New Roman bold", 18),
-            width=15,
-            pady=5,
-            bg="#8efa8e",
-            fg="grey",
-            relief="raised",
-        )
-        self.saveDataBut.grid(column=0, row=1, in_=sFrame, pady=10, padx=10)
-
-        self.clearDataBut = tk.Button(
-            text="Clear All Data",
-            font=("Times New Roman bold", 18),
-            width=15,
-            pady=5,
-            bg="#ff475d",
-            fg="grey",
-            relief="raised",
-        )
-        self.clearDataBut.grid(column=0, row=2, in_=sFrame, pady=10, padx=10)
-
         self.startStopDataBut = tk.Button(
             text="Start Data Collection",
             font=("Times New Roman bold", 18),
@@ -737,19 +714,39 @@ class Gui:
             relief="raised",
             command=self.startStopData,
         )
-        self.startStopDataBut.grid(column=0, row=0, in_=sFrame, pady=20, padx=10)
+        self.startStopDataBut.grid(column=0, row=0, in_=sFrame, pady=20, padx=10, sticky=tk.EW)
+
+        self.saveDataBut = tk.Button(
+            text="Save All Data",
+            font=("Times New Roman bold", 18),
+            width=15,
+            pady=5,
+            bg="#8efa8e",
+            fg="grey",
+            relief="raised",
+        )
+        self.saveDataBut.grid(column=0, row=1, in_=sFrame, pady=10, padx=10, sticky=tk.EW)
+
+        self.clearDataBut = tk.Button(
+            text="Clear All Data",
+            font=("Times New Roman bold", 18),
+            width=15,
+            pady=5,
+            bg="#ff475d",
+            fg="grey",
+            relief="raised",
+        )
+        self.clearDataBut.grid(column=0, row=2, in_=sFrame, pady=10, padx=10, sticky=tk.EW)
 
         tcFrame = tk.Frame(height=20, bg="#e3f0fa")
-        tcFrame.grid(column=0, row=3, in_=sFrame)
-        tk.Label(text="TC 1: ", font=("Times New Roman bold", 12), fg="black", bg="#e3f0fa").grid(
-            column=0, row=0, in_=tcFrame
-        )
+        tcFrame.grid(column=0, row=3, in_=sFrame, sticky=tk.NW)
+
         tk.Label(
-            text=" C   TC 2: ", font=("Times New Roman bold", 12), fg="black", bg="#e3f0fa"
-        ).grid(column=2, row=0, in_=tcFrame)
-        tk.Label(text="C", font=("Times New Roman bold", 12), fg="black", bg="#e3f0fa").grid(
-            column=4, row=0, in_=tcFrame
-        )
+            text='Thermocouple 1: ', font=("Times New Roman bold", 12), fg="black", bg="#e3f0fa"
+        ).grid(column=0, row=0, in_=tcFrame)
+        tk.Label(
+            text='Thermocouple 2: ', font=("Times New Roman bold", 12), fg="black", bg="#e3f0fa"
+        ).grid(column=0, row=1, in_=tcFrame)
 
         self.tcOneVariable = tk.StringVar(value="N/A")
         tcOneLabel = tk.Label(
@@ -763,7 +760,10 @@ class Gui:
             textvariable=self.tcTwoVariable, font=("Times New Roman bold", 12),
             pady=5, fg="black", bg="#e3f0fa", width=6
         )
-        tcTwoLabel.grid(column=3, row=0, in_=tcFrame)
+        tcTwoLabel.grid(column=1, row=1, in_=tcFrame)
+
+        sFrame.columnconfigure(0, weight=1)
+        sFrame.rowconfigure(3, weight=1)
 
     def createBottomButtons(self):
         """Adds the bottom buttons to the bottom frame."""
