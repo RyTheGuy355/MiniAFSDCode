@@ -83,7 +83,7 @@ using `pip <https://pip.pypa.io>`_, by running the following command in the term
 
 .. code-block:: console
 
-    pip install mini_afsd
+    pip install -U mini_afsd
 
 
 Development Version
