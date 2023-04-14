@@ -5,7 +5,6 @@ mini_afsd
 mini_afsd is a program for controlling a miniturized additive friction stir deposition (AFSD) machine.
 
 * For Python 3.7+
-* Open Source: BSD 3-Clause License
 * Source Code: https://github.com/RyTheGuy355/MiniAFSDCode
 
 
@@ -143,14 +142,6 @@ submitting bug reports, pull requests, or general feedback, please refer
 to the `contributing guide`_.
 
 .. _contributing guide: https://github.com/RyTheGuy355/MiniAFSDCode/tree/main/docs/contributing.rst
-
-
-Changelog
----------
-
-Refer to the changelog_ for information on mini_afsd's changes.
-
-.. _changelog: https://github.com/RyTheGuy355/MiniAFSDCode/tree/main/CHANGELOG.rst
 
 
 License
