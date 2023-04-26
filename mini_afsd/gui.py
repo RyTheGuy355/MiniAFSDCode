@@ -399,6 +399,18 @@ class Gui:
         )
         homeAllBut.grid(column=4, row=5, in_=posFrame, pady=5, rowspan=2, sticky=tk.NS)
 
+        resetOffsetBut = tk.Button(
+            text="Reset &\nOffset",
+            font=("Times New Roman", 12),
+            width=7,
+            pady=5,
+            bg="#91ceff",
+            fg="black",
+            relief="raised",
+            command=self.reset_and_offset,
+        )
+        resetOffsetBut.grid(column=3, row=5, in_=posFrame, pady=5, rowspan=2, sticky=tk.NS)
+
         self.cancelJogBut = tk.Button(
             text="Cancel Jog",
             font=("Times New Roman bold", 12),
@@ -1070,3 +1082,23 @@ class Gui:
         """
         if self.controller.serial_processor.esp is not None:
             self.controller.serial_processor.zeroCord(axis)
+
+    def reset_and_offset(self):
+        """Resets the mill and then reapplies the current offsets.
+
+        Needed since FluidNC will reset the offsets when the mill is reset, so use
+        this to not lose the old offsets.
+        """
+        if self.controller.serial_processor.esp is not None:
+            # copy so that the values do not update while using
+            current_offsets = self.controller.serial_processor.work_offsets.copy()
+            current_position = (
+                float(self.xAbsVar.get()) - current_offsets[0],
+                float(self.yAbsVar.get()) - current_offsets[1],
+                float(self.zAbsVar.get()) - current_offsets[2],
+                float(self.aAbsVar.get()) - current_offsets[3],
+            )
+
+            self.sendCode(b'\x18', False),
+            self.sendCode(b'$X', False),
+            self.sendCode('G92 X{0} Y{1} Z{2} A{3}'.format(*current_position).encode(), False)
