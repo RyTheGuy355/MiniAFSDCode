@@ -22,7 +22,7 @@ class SerialProcessor:
     buffer_length : int
         The buffer length of the connected serial port. Initially starts at 15 (0-indexed) and
         reduces to 0 if buffer is full.
-    work_offsets : tuple(int, int, int, int)
+    work_offsets : list(int, int, int, int)
         The offsets for the x, y, z, and a axes on the mill, respectively.
     close_port : threading.Event
 
@@ -56,7 +56,7 @@ class SerialProcessor:
         self.port = port
         self.buffer_length = 15
         self.state = 'Idle'
-        self.work_offsets = (0, 0, 0, 0)
+        self.work_offsets = [0, 0, 0, 0]
 
         self.close_port = threading.Event()
         self.commandInvalid = threading.Event()
@@ -335,7 +335,6 @@ class SerialProcessor:
         if feed_speed is not None:
             self.controller.gui.feed_var.set(f'{feed_speed}%')
             self.controller.gui.spindle_var.set(f'{spindle_speed}%')
-
 
         self.controller.gui.stateVar.set(self.state)
         self.state_exact.set()
